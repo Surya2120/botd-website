@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,18 +8,22 @@
     content="Battle Of The Dance (BOTD) is India's hybrid online dance competition featuring video auditions, live stage performances, elite judges, and audience voting."
   >
   <title>Battle Of The Dance | India's Hybrid Online Dance Competition</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="site-shell">
     <header class="topbar" id="top">
       <div class="container nav-wrap">
         <a class="brand" href="index.html" aria-label="Battle Of The Dance home">
-          <img src="assets/images/Final_BOTD_Logo.png" alt="BOTD logo">
+          <img
+            class="theme-logo"
+            src="assets/images/Final_BOTD_Logo.png"
+            alt="BOTD logo"
+          >
         </a>
         <nav class="nav" id="site-nav" aria-label="Primary navigation">
           <a class="nav-link is-current" href="index.html">Home</a>
-          <a class="nav-link" href="about-botd.html">About BOTD</a>
+          <a class="nav-link" href="about.html">About BOTD</a>
           <a class="nav-link" href="seasons.html">Seasons</a>
           <a class="nav-link nav-accent" href="register.html">Register Now</a>
           <a class="nav-link" href="events.html">Events</a>
@@ -59,14 +63,19 @@
     <main>
       <section class="hero" id="home">
         <div class="hero-backdrop" aria-hidden="true"></div>
+        <div class="hero-spotlight hero-spotlight-left" aria-hidden="true"></div>
+        <div class="hero-spotlight hero-spotlight-right" aria-hidden="true"></div>
+        <div class="hero-beam" aria-hidden="true"></div>
+        <div class="hero-stage-glow" aria-hidden="true"></div>
         <div class="hero-grid-lines" aria-hidden="true"></div>
         <div class="container hero-content">
           <div class="hero-copy reveal">
             <p class="eyebrow">Hybrid Online Dance Competition</p>
             <h1>Battle Of The Dance</h1>
-            <p class="hero-subtitle">India’s Hybrid Online Dance Competition</p>
+            <p class="hero-subtitle">India's Hybrid Online Dance Competition</p>
             <p class="hero-text">
-              BOTD begins online, where dancers submit audition videos, and builds toward a live on-stage showdown judged by industry experts, an invisible judge, and the audience.
+              Where real talent meets real opportunity.
+              Start from your screen and step onto a live stage.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="register.html">Register Now</a>
@@ -106,34 +115,24 @@
 
       <section class="section overview reveal">
         <div class="container">
-          <div class="section-heading">
-            <p class="eyebrow">Sections Overview</p>
-            <h2>The Homepage Experience</h2>
-            <p>
-              This landing page introduces BOTD like a reality-show opening sequence: concept first, competition flow next, then judges, categories, rewards, and a final push toward registration or deeper site exploration.
-            </p>
-          </div>
-          <div class="overview-grid">
-            <article class="glass-card">
-              <span class="card-index">01</span>
-              <h3>Hero Entrance</h3>
-              <p>Logo-led introduction, cinematic visuals, and direct calls to register or explore seasons.</p>
-            </article>
-            <article class="glass-card">
-              <span class="card-index">02</span>
-              <h3>Concept Clarity</h3>
-              <p>Explains the BOTD format from online audition to live stage performance in a clean, visual way.</p>
-            </article>
-            <article class="glass-card">
-              <span class="card-index">03</span>
-              <h3>Competition Mechanics</h3>
-              <p>Breaks down the journey, judging model, categories, and the key reasons to participate.</p>
-            </article>
-            <article class="glass-card">
-              <span class="card-index">04</span>
-              <h3>Conversion Finish</h3>
-              <p>Ends with a strong CTA, footer navigation, and clear paths into separate pages of the site.</p>
-            </article>
+          <div class="season-banner">
+            <div class="season-banner-copy reveal">
+              <p class="eyebrow">Season 1 Highlight</p>
+              <h2>Season 1 - Bangalore Edition</h2>
+              <p class="season-banner-subtitle">Registrations Now Open</p>
+              <p>
+                Be part of the first ever BOTD season.
+              </p>
+              <div class="season-banner-actions">
+                <a class="button button-primary" href="register.html">Register Now</a>
+                <a class="button button-secondary" href="events.html">View Events</a>
+              </div>
+            </div>
+            <div class="season-banner-visual reveal reveal-delay-1">
+              <div class="season-poster-frame">
+                <img src="assets/images/poster2.jpg" alt="BOTD Season 1 Bangalore edition poster">
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -142,9 +141,10 @@
         <div class="container">
           <div class="section-heading reveal">
             <p class="eyebrow">What Is BOTD</p>
-            <h2>Where online auditions meet the energy of a live dance stage</h2>
+            <h2>Where digital auditions meet live stage performance</h2>
             <p>
-              Battle Of The Dance is built for dancers who want reach, visibility, and a real performance moment. It starts with video submissions and culminates in a live stage battle designed for audience excitement and talent discovery.
+              Battle Of The Dance (BOTD) is a next-generation platform that connects digital auditions with live stage performances.
+              It is designed to give dancers a fair chance to be seen, recognized, and celebrated.
             </p>
           </div>
           <div class="concept-grid">
@@ -171,33 +171,33 @@
         <div class="container">
           <div class="section-heading reveal">
             <p class="eyebrow">How It Works</p>
-            <h2>A five-step journey from upload to victory</h2>
+            <h2>A clear path from audition to recognition</h2>
           </div>
           <div class="steps">
             <article class="step-card reveal">
               <span class="step-number">1</span>
-              <h3>Submit Video Audition</h3>
-              <p>Contestants send their best performance clips through the BOTD online audition process.</p>
+              <h3>Submit your video audition</h3>
+              <p>Start online with a performance video that shows your style, skill, and individuality.</p>
             </article>
             <article class="step-card reveal reveal-delay-1">
               <span class="step-number">2</span>
               <h3>Get Selected</h3>
-              <p>The BOTD team reviews entries and chooses standout talent for the next stage.</p>
+              <p>Standout dancers move forward through a selection process designed to identify real talent.</p>
             </article>
             <article class="step-card reveal reveal-delay-2">
               <span class="step-number">3</span>
-              <h3>Perform Live</h3>
-              <p>Shortlisted dancers step onto the live stage for a performance built for impact.</p>
+              <h3>Perform live on stage</h3>
+              <p>Selected contestants step into a live performance environment built for energy and visibility.</p>
             </article>
             <article class="step-card reveal">
               <span class="step-number">4</span>
-              <h3>Judges + Audience Voting</h3>
-              <p>Scores are shaped by expert opinion and verified audience support, creating a balanced format.</p>
+              <h3>Judges and audience vote</h3>
+              <p>Performance outcomes are shaped by expert evaluation and audience participation.</p>
             </article>
             <article class="step-card reveal reveal-delay-1">
               <span class="step-number">5</span>
-              <h3>Win Rewards</h3>
-              <p>The strongest performers earn recognition, prizes, and career-facing opportunities.</p>
+              <h3>Win and get recognized</h3>
+              <p>The strongest performers earn recognition, rewards, and meaningful exposure.</p>
             </article>
           </div>
         </div>
@@ -207,23 +207,23 @@
         <div class="container judges-layout">
           <div class="section-heading reveal">
             <p class="eyebrow">Judges & Voting</p>
-            <h2>Built for suspense, credibility, and crowd energy</h2>
+            <h2>Balanced. Transparent. Performance-driven.</h2>
             <p>
-              BOTD combines expert evaluation with fan power. Three industry judges, one invisible judge, and audience participation create a format that feels both prestigious and unpredictable.
+              BOTD is structured to give talent a fair and balanced evaluation through expert judging and audience participation.
             </p>
           </div>
           <div class="judges-grid">
             <article class="vote-card reveal">
-              <h3>3 Industry Judges</h3>
-              <p>Experienced dance professionals evaluate technique, stage command, and performance quality.</p>
+              <h3>3 Industry-Level Judges</h3>
+              <p>Experienced professionals assess performance quality, stage command, and technical strength.</p>
             </article>
             <article class="vote-card reveal reveal-delay-1">
               <h3>1 Invisible Judge</h3>
-              <p>A hidden evaluation layer adds drama, fairness, and anticipation to the final results.</p>
+              <p>An additional unseen judge adds another layer of fairness and integrity to the format.</p>
             </article>
             <article class="vote-card vote-card-wide reveal reveal-delay-2">
               <h3>50% Judges | 50% Audience</h3>
-              <p>The BOTD outcome is shaped equally by expert scoring and audience voting, giving both skill and fan support real weight.</p>
+              <p>Judges contribute 50% and the audience contributes 50%, creating a strong balance between performance merit and public support.</p>
               <div class="vote-split">
                 <div class="vote-bar judges-bar"><span>Judges 50%</span></div>
                 <div class="vote-bar audience-bar"><span>Audience 50%</span></div>
@@ -244,16 +244,16 @@
               <h3>Kids</h3>
               <p class="category-age">Under 16</p>
               <ul class="simple-list">
-                <li>Solo performance category</li>
-                <li>Group performance category</li>
+                <li>Solo</li>
+                <li>Group</li>
               </ul>
             </article>
             <article class="category-card reveal reveal-delay-1">
               <h3>Open</h3>
               <p class="category-age">16 to 35</p>
               <ul class="simple-list">
-                <li>Solo performance category</li>
-                <li>Group performance category</li>
+                <li>Solo</li>
+                <li>Group</li>
               </ul>
             </article>
           </div>
@@ -268,20 +268,20 @@
           </div>
           <div class="benefits-grid">
             <article class="benefit-card reveal">
-              <h3>Cash Prizes</h3>
-              <p>Winning BOTD should feel meaningful, with prize money that reflects the scale of the competition.</p>
+              <h3>Cash Prize</h3>
+              <p>Rewarding winning performances with meaningful recognition that feels earned.</p>
             </article>
             <article class="benefit-card reveal reveal-delay-1">
               <h3>Trophy</h3>
-              <p>A premium title deserves a trophy moment that feels worthy of a live stage finale.</p>
+              <p>A title moment that reflects the scale and prestige of the BOTD stage.</p>
             </article>
             <article class="benefit-card reveal reveal-delay-2">
               <h3>Industry Opportunities</h3>
-              <p>Exposure to judges, organizers, and the wider dance community can open future performance doors.</p>
+              <p>Visibility on the BOTD platform can lead to greater recognition and future opportunities.</p>
             </article>
             <article class="benefit-card reveal">
               <h3>Digital Recognition</h3>
-              <p>BOTD amplifies standout talent online, helping dancers build momentum beyond the event itself.</p>
+              <p>Strong performances deserve to be seen, shared, and remembered beyond the event day.</p>
             </article>
           </div>
         </div>
@@ -292,11 +292,10 @@
           <p class="eyebrow">Final Call</p>
           <h2>Are You Ready to Battle?</h2>
           <p>
-            Bring your energy, your style, and your strongest performance. Start with the audition, chase the spotlight, and step into BOTD.
+            Step in. Stand out. Own the stage.
           </p>
           <div class="cta-actions">
             <a class="button button-primary" href="register.html">Register Now</a>
-            <a class="button button-secondary" href="contact.html">Contact Team BOTD</a>
           </div>
         </div>
       </section>
@@ -306,18 +305,25 @@
       <div class="container footer-grid">
         <div>
           <a class="brand footer-brand" href="index.html" aria-label="Battle Of The Dance home">
-            <img src="assets/images/Final_BOTD_Logo.png" alt="BOTD logo">
+            <img
+              class="theme-logo"
+              src="assets/images/Final_BOTD_Logo.png"
+              alt="BOTD logo"
+            >
           </a>
           <p class="footer-copy">
-            BOTD is a hybrid dance competition built to discover talent online and elevate it live on stage.
+            BOTD is built to identify true talent, deliver fair evaluation, and create real recognition for dancers ready to step forward.
           </p>
-          <p class="footer-powered">Powered by Bee Infinity Groups</p>
+          <div class="powered-by">
+            <p class="footer-powered">Powered by Bee Infinity Groups</p>
+            <img class="powered-logo" src="assets/images/studiozlogo.webp" alt="Studioz logo">
+          </div>
         </div>
         <div>
           <h3>Quick Links</h3>
           <div class="footer-links">
             <a href="index.html">Home</a>
-            <a href="about-botd.html">About BOTD</a>
+            <a href="about.html">About BOTD</a>
             <a href="seasons.html">Seasons</a>
             <a href="register.html">Register Now</a>
             <a href="events.html">Events</a>
@@ -337,6 +343,6 @@
       </div>
     </footer>
   </div>
-  <script src="script.js"></script>
+  <script src="js/script.js"></script>
 </body>
 </html>
