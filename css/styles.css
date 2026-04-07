@@ -861,6 +861,293 @@ body[data-theme="light"] .about-hero-backdrop {
   margin-left: auto;
 }
 
+.seasons-hero {
+  min-height: 78vh;
+  padding-bottom: 88px;
+}
+
+.seasons-hero-backdrop {
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.94) 0%, rgba(5, 5, 5, 0.72) 48%, rgba(5, 5, 5, 0.48) 100%),
+    radial-gradient(circle at top right, rgba(246, 182, 60, 0.18), transparent 32%),
+    url("../assets/images/poster2.jpg") center center / cover no-repeat;
+}
+
+body[data-theme="light"] .seasons-hero-backdrop {
+  background:
+    linear-gradient(90deg, rgba(242, 237, 227, 0.94) 0%, rgba(242, 237, 227, 0.74) 48%, rgba(242, 237, 227, 0.48) 100%),
+    radial-gradient(circle at top right, rgba(216, 139, 18, 0.18), transparent 32%),
+    url("../assets/images/poster2.jpg") center center / cover no-repeat;
+}
+
+.seasons-hero-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+  gap: 42px;
+  align-items: center;
+}
+
+.season-overview-meta {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.season-meta-card,
+.accordion-item,
+.contestant-card,
+.judge-profile-card,
+.rules-block,
+.fee-card {
+  background: linear-gradient(180deg, var(--surface), var(--surface-strong));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+.season-meta-card {
+  padding: 22px;
+}
+
+.season-meta-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--gold-soft);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.season-hero-poster {
+  max-width: 380px;
+  margin-left: auto;
+  overflow: hidden;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 214, 109, 0.24);
+  box-shadow:
+    var(--shadow),
+    0 0 34px rgba(255, 174, 54, 0.12);
+}
+
+.season-hero-poster img {
+  width: 100%;
+  height: auto;
+}
+
+.accordion {
+  display: grid;
+  gap: 18px;
+}
+
+.accordion-item {
+  overflow: hidden;
+}
+
+.accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.accordion-icon {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.accordion-icon::before,
+.accordion-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--gold-soft);
+  border-radius: 999px;
+  transform: translateY(-50%);
+  transition: transform var(--transition), opacity var(--transition);
+}
+
+.accordion-icon::after {
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.accordion-trigger[aria-expanded="true"] .accordion-icon::after {
+  opacity: 0;
+  transform: translateY(-50%) rotate(90deg) scaleX(0.6);
+}
+
+.accordion-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 360ms ease;
+}
+
+.accordion-panel.is-open {
+  max-height: 5000px;
+}
+
+.accordion-panel-inner {
+  padding: 0 28px 28px;
+}
+
+.contestant-tabs {
+  display: grid;
+  gap: 20px;
+}
+
+.tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tab-button {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-soft);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), color var(--transition), background-color var(--transition);
+}
+
+.tab-button:hover,
+.tab-button.is-active {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: rgba(255, 183, 60, 0.1);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.is-active {
+  display: block;
+}
+
+.contestant-meta {
+  margin: 0 0 18px;
+  color: var(--text-soft);
+}
+
+.contestant-grid,
+.judges-showcase,
+.fee-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.contestant-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.contestant-card,
+.judge-profile-card {
+  overflow: hidden;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.contestant-card:hover,
+.judge-profile-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--line-strong);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px rgba(255, 197, 66, 0.14),
+    0 0 30px rgba(255, 174, 54, 0.1);
+}
+
+.contestant-card img,
+.judge-profile-card img {
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+}
+
+.contestant-card h3,
+.judge-profile-card h3 {
+  margin: 0;
+  padding: 18px 18px 6px;
+  font-size: 1.08rem;
+}
+
+.contestant-card p,
+.judge-profile-card p {
+  margin: 0;
+  padding: 0 18px 18px;
+  color: var(--text-soft);
+}
+
+.judges-showcase {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.rules-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.rules-block {
+  padding: 24px;
+}
+
+.rules-block h3 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+}
+
+.fee-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fee-card {
+  padding: 24px;
+}
+
+.fee-card h3 {
+  margin: 0 0 14px;
+}
+
+.fee-card p {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.fee-card-wide {
+  display: grid;
+  align-content: center;
+}
+
+.download-button {
+  display: inline-flex;
+  gap: 12px;
+}
+
+.download-icon {
+  font-size: 1.1rem;
+}
+
 .highlight-card,
 .glass-card,
 .concept-card,
@@ -1434,7 +1721,8 @@ body[data-theme="light"] .section-alt::before {
 
   .about-hero-content,
   .story-layout,
-  .vision-layout {
+  .vision-layout,
+  .seasons-hero-content {
     grid-template-columns: 1fr;
   }
 
@@ -1451,8 +1739,14 @@ body[data-theme="light"] .section-alt::before {
 
   .problem-grid,
   .experience-panels,
-  .founders-grid {
+  .founders-grid,
+  .judges-showcase,
+  .fee-grid {
     grid-template-columns: 1fr;
+  }
+
+  .contestant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .season-banner {
@@ -1464,9 +1758,14 @@ body[data-theme="light"] .section-alt::before {
   }
 
   .about-hero-panel,
-  .vision-poster {
+  .vision-poster,
+  .season-hero-poster {
     justify-content: flex-start;
     margin-left: 0;
+  }
+
+  .season-overview-meta {
+    grid-template-columns: 1fr;
   }
 
   .poster-stack {
@@ -1544,6 +1843,7 @@ body[data-theme="light"] .section-alt::before {
   .benefits-grid,
   .category-grid,
   .difference-grid,
+  .contestant-grid,
   .vote-split,
   .footer-grid {
     grid-template-columns: 1fr;
@@ -1587,8 +1887,17 @@ body[data-theme="light"] .section-alt::before {
   .difference-card,
   .experience-card,
   .vision-card,
-  .founder-content {
+  .founder-content,
+  .accordion-trigger,
+  .accordion-panel-inner,
+  .rules-block,
+  .fee-card,
+  .season-meta-card {
     padding: 26px;
+  }
+
+  .accordion-panel-inner {
+    padding-top: 0;
   }
 
   .section > .container::before,
@@ -1649,7 +1958,17 @@ body[data-theme="light"] .section-alt::before {
   .difference-card,
   .experience-card,
   .problem-card,
-  .founder-content {
+  .founder-content,
+  .rules-block,
+  .fee-card {
     padding: 22px;
+  }
+
+  .accordion-trigger {
+    padding: 22px;
+  }
+
+  .accordion-panel-inner {
+    padding: 0 22px 22px;
   }
 }

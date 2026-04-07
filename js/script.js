@@ -153,12 +153,56 @@ function setupInteractiveCards() {
   });
 }
 
+function setupAccordions() {
+  document.querySelectorAll("[data-accordion]").forEach((accordion) => {
+    accordion.querySelectorAll(".accordion-item").forEach((item) => {
+      const trigger = item.querySelector(".accordion-trigger");
+      const panel = item.querySelector(".accordion-panel");
+
+      if (!trigger || !panel) {
+        return;
+      }
+
+      trigger.addEventListener("click", () => {
+        const isOpen = trigger.getAttribute("aria-expanded") === "true";
+        trigger.setAttribute("aria-expanded", String(!isOpen));
+        panel.classList.toggle("is-open", !isOpen);
+      });
+    });
+  });
+}
+
+function setupTabs() {
+  document.querySelectorAll("[data-tabs]").forEach((tabGroup) => {
+    const buttons = tabGroup.querySelectorAll(".tab-button");
+    const panels = tabGroup.querySelectorAll(".tab-panel");
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const targetId = button.dataset.tabTarget;
+
+        buttons.forEach((item) => {
+          const isActive = item === button;
+          item.classList.toggle("is-active", isActive);
+          item.setAttribute("aria-selected", String(isActive));
+        });
+
+        panels.forEach((panel) => {
+          panel.classList.toggle("is-active", panel.id === targetId);
+        });
+      });
+    });
+  });
+}
+
 loadTheme();
 setupRevealAnimations();
 syncHeaderState();
 syncScrollEffects();
 setupHeroParallax();
 setupInteractiveCards();
+setupAccordions();
+setupTabs();
 
 themeToggle?.addEventListener("click", toggleTheme);
 menuToggle?.addEventListener("click", toggleMenu);
