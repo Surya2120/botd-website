@@ -1,0 +1,243 @@
+.voting-hero {
+  min-height: 72vh;
+  padding-bottom: 84px;
+}
+
+.voting-hero-backdrop {
+  background:
+    linear-gradient(90deg, rgba(5, 5, 5, 0.95) 0%, rgba(5, 5, 5, 0.74) 48%, rgba(5, 5, 5, 0.48) 100%),
+    radial-gradient(circle at top right, rgba(246, 182, 60, 0.18), transparent 32%),
+    url("../assets/images/poster2.jpg") center center / cover no-repeat;
+}
+
+body[data-theme="light"] .voting-hero-backdrop {
+  background:
+    linear-gradient(90deg, rgba(242, 237, 227, 0.95) 0%, rgba(242, 237, 227, 0.76) 48%, rgba(242, 237, 227, 0.48) 100%),
+    radial-gradient(circle at top right, rgba(216, 139, 18, 0.18), transparent 32%),
+    url("../assets/images/poster2.jpg") center center / cover no-repeat;
+}
+
+.voting-hero-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.86fr);
+  gap: 36px;
+  align-items: center;
+}
+
+.voting-hero-card,
+.voting-form-card,
+.vote-card-item {
+  background: linear-gradient(180deg, var(--surface), var(--surface-strong));
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.voting-hero-card {
+  padding: 30px;
+}
+
+.voting-hero-label,
+.selected-label {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--gold-soft);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.voting-hero-card strong {
+  display: block;
+  margin-bottom: 14px;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  line-height: 1;
+}
+
+.voting-hero-card p {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.75;
+}
+
+.voting-shell {
+  display: grid;
+  gap: 26px;
+}
+
+.vote-tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.vote-tab-button {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-soft);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), color var(--transition), background-color var(--transition);
+}
+
+.vote-tab-button:hover,
+.vote-tab-button.is-active {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: rgba(255, 183, 60, 0.1);
+}
+
+.vote-tab-panel {
+  display: none;
+}
+
+.vote-tab-panel.is-active {
+  display: block;
+}
+
+.contestant-vote-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.vote-card-item {
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.vote-card-item img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.vote-card-item h3 {
+  margin: 0;
+  padding: 16px 16px 6px;
+  font-size: 1.02rem;
+}
+
+.vote-card-item p {
+  margin: 0;
+  padding: 0 16px 18px;
+  color: var(--text-soft);
+}
+
+.vote-card-item:hover,
+.vote-card-item.is-selected {
+  transform: translateY(-8px);
+  border-color: var(--line-strong);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px rgba(255, 197, 66, 0.16),
+    0 0 32px rgba(255, 174, 54, 0.12);
+}
+
+.vote-card-item.is-selected {
+  background:
+    linear-gradient(180deg, rgba(255, 183, 60, 0.12), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, var(--surface), var(--surface-strong));
+}
+
+.voting-form-card {
+  padding: 30px;
+  border-color: rgba(255, 197, 66, 0.24);
+  background:
+    linear-gradient(180deg, rgba(18, 18, 18, 0.86), rgba(24, 24, 24, 0.96)),
+    radial-gradient(circle at top right, rgba(255, 183, 60, 0.08), transparent 30%);
+}
+
+body[data-theme="light"] .voting-form-card {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 247, 0.95), rgba(250, 243, 233, 0.98)),
+    radial-gradient(circle at top right, rgba(216, 139, 18, 0.08), transparent 30%);
+}
+
+.voting-selected {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.voting-form {
+  display: grid;
+  gap: 20px;
+}
+
+.voting-form-card .field {
+  margin-bottom: 4px;
+}
+
+.otp-actions {
+  display: flex;
+}
+
+.otp-button,
+.vote-submit-button {
+  min-width: 190px;
+}
+
+.otp-section {
+  display: grid;
+  gap: 18px;
+}
+
+.otp-section.is-hidden {
+  display: none;
+}
+
+.vote-status {
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.vote-status.is-error {
+  color: #ff8c7f;
+}
+
+.vote-status.is-success {
+  color: #7fd48b;
+}
+
+@media (max-width: 1080px) {
+  .voting-hero-content {
+    grid-template-columns: 1fr;
+  }
+
+  .contestant-vote-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .contestant-vote-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .voting-form-card,
+  .voting-hero-card {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .contestant-vote-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .otp-actions,
+  .otp-button,
+  .vote-submit-button {
+    width: 100%;
+  }
+}
