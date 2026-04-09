@@ -1766,6 +1766,8 @@ body[data-theme="light"] .section-alt::before {
 .powered-logo {
   width: 138px;
   height: auto;
+  background-color: white;
+  border-radius: 70px;
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.18));
 }
 
