@@ -240,6 +240,33 @@ body[data-theme="light"] .sponsor-form {
   grid-column: 1 / -1;
 }
 
+/* 🔥 Fix dropdown dark theme */
+.sponsor-form .field select {
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 214, 109, 0.14);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(20,20,20,0.9), rgba(30,30,30,0.9));
+  color: #fff;
+  font: inherit;
+  outline: none;
+  appearance: none;
+}
+
+/* dropdown options (partial support) */
+.sponsor-form .field select option {
+  background: #111;
+  color: #fff;
+}
+
+/* focus glow */
+.sponsor-form .field select:focus {
+  border-color: #f6b63c;
+  box-shadow: 0 0 10px rgba(246, 182, 60, 0.3);
+}
+
+
+
 .field textarea {
   width: 100%;
   padding: 16px 18px;
@@ -283,8 +310,14 @@ body[data-theme="light"] .field textarea {
 }
 
 .sponsor-form-status.is-success {
-  color: #7fd48b;
+  color: #00ff22;
 }
+
+
+
+
+
+
 
 @media (max-width: 1080px) {
   .title-sponsor-banner,
@@ -298,6 +331,13 @@ body[data-theme="light"] .field textarea {
   .sponsor-grid-bronze {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .sponsor-form .field select {
+    padding: 14px 16px;
+    font-size: 0.95rem;
+    border-radius: 16px;
+  }
+
 }
 
 @media (max-width: 820px) {
@@ -314,6 +354,12 @@ body[data-theme="light"] .field textarea {
   .sponsor-form {
     padding: 24px;
   }
+
+  .sponsor-form .field select {
+    padding: 14px;
+    font-size: 0.95rem;
+    border-radius: 14px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -327,4 +373,12 @@ body[data-theme="light"] .field textarea {
   .sponsor-placeholder-sm {
     width: 100%;
   }
+
+ .sponsor-form .field select {
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    border-radius: 12px;
+    min-height: 48px;
+  }
+
 }

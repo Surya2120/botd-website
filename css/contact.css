@@ -172,6 +172,15 @@ body[data-theme="light"] .field textarea {
   gap: 22px;
 }
 
+.contact-form .field select {
+  background-color: #111;
+  color: #fff;
+}
+
+.contact-form .field select option {
+  background-color: #111;
+  color: #fff;
+}
 .whatsapp-card {
   border-color: rgba(111, 210, 138, 0.22);
   background:

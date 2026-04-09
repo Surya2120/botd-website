@@ -38,6 +38,48 @@ body[data-theme="light"] .voting-hero-backdrop {
 .voting-hero-card {
   padding: 30px;
 }
+.confirm-box {
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #111, #1a1a1a);
+  margin-bottom: 20px;
+}
+
+.confirm-label {
+  font-size: 0.8rem;
+  color: var(--gold-soft);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.confirm-warning {
+  background: rgba(255, 183, 60, 0.15);
+  padding: 10px;
+  border-radius: 12px;
+  margin: 12px 0;
+  font-size: 0.9rem;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-box.error {
+  border-color: #ff4d4d;
+  box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.4),
+              0 0 20px rgba(255, 77, 77, 0.25);
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
 
 .voting-hero-label,
 .selected-label {

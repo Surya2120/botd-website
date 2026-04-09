@@ -1,6 +1,14 @@
 const THEME_KEY = "botd-theme";
 const LOGO_PATH = "assets/images/Final_BOTD_Logo.png";
 
+
+const confirmBox = document.getElementById("confirm-box");
+const confirmTeamName = document.getElementById("confirm-team-name");
+const confirmVoteBtn = document.getElementById("confirm-vote");
+const changeSelectionBtn = document.getElementById("change-selection");
+
+let isConfirmed = false;
+
 const body = document.body;
 const themeToggle = document.getElementById("theme-toggle");
 const themeLabel = themeToggle?.querySelector(".theme-toggle-label");
@@ -694,7 +702,7 @@ function setupVotingPage() {
     const isMobileValid = Boolean(mobileInput?.value.trim().match(/^\d{10}$/));
 
     if (sendOtpButton && !sendOtpButton.classList.contains("is-loading")) {
-      sendOtpButton.disabled = !(selectedContestant && isMobileValid);
+sendOtpButton.disabled = !(selectedContestant && isMobileValid);
     }
 
     if (verifyVoteButton && !verifyVoteButton.classList.contains("is-loading")) {
@@ -744,58 +752,95 @@ function setupVotingPage() {
     });
   });
 
-  contestantCards.forEach((card) => {
-    card.addEventListener("click", () => {
-      const parentPanel = card.closest(".vote-tab-panel");
 
-      if (!parentPanel?.classList.contains("is-active")) {
-        return;
-      }
+  confirmVoteBtn?.addEventListener("click", () => {
+  if (!selectedContestant) return;
 
-      contestantCards.forEach((item) => item.classList.remove("is-selected"));
-      card.classList.add("is-selected");
-      selectedContestant = card.dataset.contestant || "";
+  isConfirmed = true;
+  confirmBox.classList.remove("error"); // 🔥 remove red glow
+  selectedLabel.textContent = `Voting for: ${selectedContestant}`;
 
-      if (selectedLabel) {
-        selectedLabel.textContent = `Voting for: ${selectedContestant}`;
-      }
+  syncVoteState();
+});
 
-      generatedOtp = "";
-      otpSection?.classList.add("is-hidden");
-      if (otpInput) {
-        otpInput.value = "";
-        otpInput.closest(".field")?.classList.remove("is-filled", "is-success", "is-error");
-      }
-      setVoteStatus("", "");
-      syncVoteState();
+
+changeSelectionBtn?.addEventListener("click", () => {
+  isConfirmed = false;
+  selectedContestant = "";
+
+  contestantCards.forEach((item) => item.classList.remove("is-selected"));
+
+  confirmBox.classList.add("is-hidden");
+  selectedLabel.textContent = "Voting for: None selected";
+
+  syncVoteState();
+});
+
+
+contestantCards.forEach((card) => {
+  card.addEventListener("click", () => {
+    const parentPanel = card.closest(".vote-tab-panel");
+
+    if (!parentPanel?.classList.contains("is-active")) return;
+
+    contestantCards.forEach((item) => item.classList.remove("is-selected"));
+    card.classList.add("is-selected");
+
+    selectedContestant = card.dataset.contestant || "";
+
+    // Show confirm box
+    confirmBox.classList.remove("is-hidden");
+    confirmTeamName.textContent = selectedContestant;
+
+    isConfirmed = false;
+    selectedLabel.textContent = "Voting for: Not confirmed";
+
+    syncVoteState();
+  });
+});
+
+
+sendOtpButton?.addEventListener("click", () => {
+
+  // ❌ Not confirmed → show error
+  if (!isConfirmed) {
+    confirmBox.classList.add("error");
+
+    setVoteStatus("Please confirm your team before proceeding.", "is-error");
+
+    setTimeout(() => {
+      confirmBox.classList.remove("error");
+    }, 1200);
+
+    return;
+  }
+
+  const mobileNumber = mobileInput?.value.trim() || "";
+  const existingVotes = JSON.parse(localStorage.getItem("botd-votes") || "[]");
+
+  if (existingVotes.some((vote) => vote.mobileNumber === mobileNumber)) {
+    setVoteStatus("This mobile number has already been used to vote.", "is-error");
+    return;
+  }
+
+  setButtonLoading(sendOtpButton, true, "Sending");
+  generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
+
+  setTimeout(async () => {
+    otpSection?.classList.remove("is-hidden");
+    setVoteStatus("OTP sent for demo verification.", "is-success");
+    setButtonLoading(sendOtpButton, false, "Send OTP");
+    syncVoteState();
+
+    await showPopup({
+      title: "Demo OTP",
+      text: `Your OTP is: ${generatedOtp}`,
+      primaryText: "Continue",
     });
-  });
+  }, 420);
+});
 
-  sendOtpButton?.addEventListener("click", () => {
-    const mobileNumber = mobileInput?.value.trim() || "";
-    const existingVotes = JSON.parse(localStorage.getItem("botd-votes") || "[]");
 
-    if (existingVotes.some((vote) => vote.mobileNumber === mobileNumber)) {
-      setVoteStatus("This mobile number has already been used to vote.", "is-error");
-      return;
-    }
-
-    setButtonLoading(sendOtpButton, true, "Sending");
-    generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
-
-    window.setTimeout(async () => {
-      otpSection?.classList.remove("is-hidden");
-      setVoteStatus("OTP sent for demo verification.", "is-success");
-      setButtonLoading(sendOtpButton, false, "Send OTP");
-      syncVoteState();
-
-      await showPopup({
-        title: "Demo OTP",
-        text: `Your OTP is: ${generatedOtp}`,
-        primaryText: "Continue",
-      });
-    }, 420);
-  });
 
   otpInput?.addEventListener("input", syncVoteState);
   mobileInput?.addEventListener("input", syncVoteState);
