@@ -266,6 +266,18 @@
                       <span class="upload-button">Choose Audio</span>
                       <span class="upload-file-name" id="audio-file-name">No file selected</span>
                     </label>
+                    <label class="upload-field">
+                      <span class="upload-label">Upload Photos</span>
+                      <input type="file" name="photoFiles" id="photo-files" accept="image/*" multiple>
+                      <span class="upload-button">Choose Photos</span>
+                      <span class="upload-file-name" id="photo-file-name">No files selected</span>
+                    </label>
+                    <label class="upload-field">
+                      <span class="upload-label">Upload Documents</span>
+                      <input type="file" name="documentFiles" id="document-files" accept=".pdf,.doc,.docx,image/*" multiple>
+                      <span class="upload-button">Choose Documents</span>
+                      <span class="upload-file-name" id="document-file-name">No files selected</span>
+                    </label>
                   </div>
 
                   <label class="agreement">
@@ -278,7 +290,7 @@
                       <p class="payment-label">Entry Fee</p>
                       <strong class="payment-value">Rs. 99</strong>
                     </div>
-                    <button type="button" class="button button-primary payment-button" id="pay-submit" disabled>
+                    <button type="button" class="button button-primary payment-button" id="pay-submit">  
                       <span class="payment-button-text">Pay &amp; Submit</span>
                     </button>
                   </div>
@@ -286,7 +298,7 @@
                   <p class="form-status" id="form-status" aria-live="polite"></p>
                   <div class="success-message is-hidden" id="success-message">
                     <h3>Registration received</h3>
-                    <p>Your audition details have been saved locally. We are ready for the next step.</p>
+                    <p>Your audition details and uploads have been stored successfully.</p>
                   </div>
                 </form>
               </div>
@@ -355,7 +367,12 @@
     </footer>
   </div>
 
+
+
+
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script type="module" src="js/script.js"></script>
+
+  
 </body>
 </html>

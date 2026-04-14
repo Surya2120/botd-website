@@ -294,6 +294,35 @@ body[data-theme="light"] .voting-hero-backdrop {
   gap: 26px;
 }
 
+.voting-shell.is-closed .vote-tab-list,
+.voting-shell.is-closed #voting-panels,
+.voting-shell.is-closed #confirm-box,
+.voting-shell.is-closed .voting-form-card {
+  display: none;
+}
+
+.voting-closed-state {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  padding: 36px 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 198, 86, 0.2);
+  background:
+    radial-gradient(circle at top, rgba(255, 192, 78, 0.12), transparent 42%),
+    linear-gradient(180deg, var(--surface), var(--surface-strong));
+  box-shadow: var(--shadow);
+  color: var(--gold-soft);
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.voting-closed-state[hidden] {
+  display: none !important;
+}
+
 .vote-tab-list {
   display: flex;
   flex-wrap: wrap;
@@ -710,72 +739,6 @@ body[data-theme="light"] .voting-form-card {
   pointer-events: none;
   overflow: hidden;
   z-index: 2400;
-  display: grid;
-  place-items: center;
-}
-
-.party-blast-overlay {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at center, rgba(255, 198, 86, 0.2), transparent 34%),
-    radial-gradient(circle at 20% 20%, rgba(255, 143, 15, 0.16), transparent 24%),
-    radial-gradient(circle at 80% 25%, rgba(127, 212, 139, 0.12), transparent 22%),
-    linear-gradient(180deg, rgba(5, 5, 5, 0.08), rgba(5, 5, 5, 0.24));
-  animation: partyOverlayGlow 2.2s ease-in-out infinite alternate;
-}
-
-.party-blast-center {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  gap: 10px;
-  padding: 24px 28px;
-  min-width: min(560px, calc(100vw - 32px));
-  max-width: 680px;
-  text-align: center;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 212, 105, 0.34);
-  background:
-    linear-gradient(180deg, rgba(18, 18, 18, 0.86), rgba(18, 18, 18, 0.68)),
-    radial-gradient(circle at top, rgba(255, 200, 90, 0.14), transparent 52%);
-  box-shadow:
-    0 0 0 1px rgba(255, 212, 105, 0.16),
-    0 0 42px rgba(255, 174, 54, 0.18),
-    0 24px 80px rgba(0, 0, 0, 0.34);
-  animation: partyCenterPop 0.65s cubic-bezier(0.2, 0.8, 0.2, 1), partyCenterFloat 2.8s ease-in-out infinite 0.65s;
-}
-
-.party-blast-kicker {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0 auto;
-  min-height: 30px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #ffd76c, #ff970f);
-  color: #17110b;
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  box-shadow: 0 0 0 0 rgba(255, 183, 60, 0.45);
-  animation: partyKickerPulse 1.2s ease-out infinite;
-}
-
-.party-blast-center strong {
-  font-size: clamp(1.6rem, 4.4vw, 2.8rem);
-  line-height: 1.05;
-  color: #fff2c8;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.party-blast-center p {
-  margin: 0;
-  color: rgba(255, 247, 232, 0.82);
-  font-size: 1rem;
 }
 
 .party-blast-particle {
@@ -872,48 +835,6 @@ body[data-theme="light"] .voting-form-card {
   }
 }
 
-@keyframes partyOverlayGlow {
-  0% {
-    opacity: 0.72;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes partyCenterPop {
-  0% {
-    opacity: 0;
-    transform: scale(0.84) translateY(18px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes partyCenterFloat {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes partyKickerPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 183, 60, 0.44);
-  }
-  70% {
-    box-shadow: 0 0 0 16px rgba(255, 183, 60, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 183, 60, 0);
-  }
-}
-
 @media (max-width: 1080px) {
   .voting-hero-content {
     grid-template-columns: 1fr;
@@ -975,11 +896,5 @@ body[data-theme="light"] .voting-form-card {
   .otp-button,
   .vote-submit-button {
     width: 100%;
-  }
-
-  .party-blast-center {
-    min-width: calc(100vw - 28px);
-    padding: 20px 18px;
-    border-radius: 22px;
   }
 }

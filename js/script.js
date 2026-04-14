@@ -32,15 +32,16 @@ import {
   subscribeSettings,
   subscribeUiControls,
   triggerPartyBlast,
-  updateUiControls,
 } from "../services/settingsService.js";
 import { submitVote, subscribeTeams, subscribeVoteTallies } from "../services/teamService.js";
 
 const THEME_KEY = "botd-theme";
+const DEVICE_ID_KEY = "botd-device-id";
 const LOGO_PATH = "assets/images/Final_BOTD_Logo.png";
 const CONTENT_COLLECTION = "adminContent";
 const JUDGES_COLLECTION = "judges";
 const SPONSORS_COLLECTION = "sponsors";
+
 const CONTENT_DOCS = {
   season: "seasonPage",
   events: "eventsPage",
@@ -348,15 +349,37 @@ function setVotingAnnouncement(message = "") {
   announcement.classList.toggle("is-visible", Boolean(message));
 }
 
+function getPersistentDeviceId() {
+  const existing = localStorage.getItem(DEVICE_ID_KEY);
+
+  if (existing) {
+    return existing;
+  }
+
+  const nextId = `device-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  localStorage.setItem(DEVICE_ID_KEY, nextId);
+  return nextId;
+}
+
 function setVotingAvailability(isOpen, closedMessage) {
   liveVotingOpen = isOpen;
   liveVotingClosedMessage = closedMessage || "";
+  const closedLabel = "VOTING WILL OPEN SOON";
 
   const notice = document.getElementById("voting-availability-message");
+  const votingShell = document.querySelector("[data-voting]");
+  const closedState = document.getElementById("voting-closed-state");
 
   if (notice) {
-    notice.textContent = isOpen ? "" : liveVotingClosedMessage;
+    notice.textContent = isOpen ? "" : closedLabel;
     notice.hidden = isOpen;
+  }
+
+  votingShell?.classList.toggle("is-closed", !isOpen);
+
+  if (closedState) {
+    closedState.hidden = isOpen;
+    closedState.textContent = isOpen ? "" : closedLabel;
   }
 }
 
@@ -444,15 +467,6 @@ function triggerPartyBlastEffect() {
   blastRoot.className = "party-blast";
   blastRoot.setAttribute("aria-hidden", "true");
 
-  blastRoot.innerHTML = `
-    <div class="party-blast-overlay"></div>
-    <div class="party-blast-center">
-      <span class="party-blast-kicker">Live Celebration</span>
-      <strong>BOTD Celebration Triggered</strong>
-      <p>The stage just lit up. Keep the energy going.</p>
-    </div>
-  `;
-
   const colors = ["#ffcf63", "#ff8f4c", "#ffffff", "#7fd48b"];
   for (let index = 0; index < 72; index += 1) {
     const particle = document.createElement("span");
@@ -508,9 +522,9 @@ function renderLeaderboard() {
     return;
   }
 
-  section.hidden = !liveUiControls.showLeaderboard;
+  section.hidden = !liveUiControls.showLeaderboard || !liveVotingOpen;
 
-  if (!liveUiControls.showLeaderboard) {
+  if (!liveUiControls.showLeaderboard || !liveVotingOpen) {
     return;
   }
 
@@ -532,7 +546,7 @@ function renderLeaderboard() {
   const hasTeams = groupedTeams.some((category) => category.teams.length);
 
   if (!hasTeams) {
-    grid.innerHTML = "<p class=\"leaderboard-empty\">Leaderboard will appear when teams are available.</p>";
+    grid.innerHTML = "<p class=\"leaderboard-empty\">Leaderboard will be updated soon.</p>";
     return;
   }
 
@@ -1390,14 +1404,19 @@ function setupRegistrationForm() {
     return;
   }
 
+  const PAYMENT_ENABLED = false;
   const categorySelect = registrationForm.querySelector("#category-select");
   const groupFields = registrationForm.querySelector("#group-fields");
   const teamNameInput = registrationForm.querySelector('input[name="teamName"]');
   const memberCountInput = registrationForm.querySelector('input[name="memberCount"]');
   const videoInput = registrationForm.querySelector("#video-file");
   const audioInput = registrationForm.querySelector("#audio-file");
+  const photoInput = registrationForm.querySelector("#photo-files");
+  const documentInput = registrationForm.querySelector("#document-files");
   const videoName = registrationForm.querySelector("#video-file-name");
   const audioName = registrationForm.querySelector("#audio-file-name");
+  const photoName = registrationForm.querySelector("#photo-file-name");
+  const documentName = registrationForm.querySelector("#document-file-name");
   const payButton = registrationForm.querySelector("#pay-submit");
   const statusMessage = registrationForm.querySelector("#form-status");
   const successMessage = registrationForm.querySelector("#success-message");
@@ -1425,8 +1444,11 @@ function setupRegistrationForm() {
     }
 
     const wrapper = input.closest(".upload-field");
-    const hasFile = Boolean(input.files?.[0]);
-    label.textContent = hasFile ? input.files[0].name : "No file selected";
+    const fileCount = Number(input.files?.length || 0);
+    const hasFile = fileCount > 0;
+    label.textContent = hasFile
+      ? (fileCount === 1 ? input.files[0].name : `${fileCount} files selected`)
+      : "No file selected";
     wrapper?.classList.toggle("is-success", hasFile);
     wrapper?.classList.remove("is-error");
   }
@@ -1473,12 +1495,15 @@ function setupRegistrationForm() {
       teamName: registrationForm.teamName.value.trim() || registrationForm.fullName.value.trim(),
       danceStyle: registrationForm.danceStyle.value,
       city: registrationForm.city.value.trim(),
+      age: registrationForm.age.value.trim(),
+      category: registrationForm.category.value,
+      memberCount: registrationForm.memberCount.value.trim(),
+      experienceLevel: registrationForm.experienceLevel.value,
       videoLink,
+      paymentEnabled: PAYMENT_ENABLED,
+      paymentStatus: PAYMENT_ENABLED ? "paid" : "disabled",
+      paymentReference: "",
       details: {
-        age: registrationForm.age.value.trim(),
-        category: registrationForm.category.value,
-        memberCount: registrationForm.memberCount.value.trim(),
-        experienceLevel: registrationForm.experienceLevel.value,
         agreementAccepted: Boolean(agreement?.checked),
         paymentAmount: 99,
         paymentCurrency: "INR",
@@ -1486,7 +1511,15 @@ function setupRegistrationForm() {
         optionalUploads: {
           videoFileName: videoInput?.files?.[0]?.name || "",
           audioFileName: audioInput?.files?.[0]?.name || "",
+          photoFileNames: Array.from(photoInput?.files || []).map((file) => file.name),
+          documentFileNames: Array.from(documentInput?.files || []).map((file) => file.name),
         },
+      },
+      files: {
+        video: videoInput?.files?.[0] || null,
+        audio: audioInput?.files?.[0] || null,
+        photos: Array.from(photoInput?.files || []),
+        documents: Array.from(documentInput?.files || []),
       },
     };
   }
@@ -1494,16 +1527,23 @@ function setupRegistrationForm() {
   async function finalizeSubmission(paymentReference) {
     const payload = collectFormData();
     payload.details.paymentReference = paymentReference;
+    payload.paymentReference = paymentReference;
+    payload.paymentStatus = PAYMENT_ENABLED ? "paid" : "disabled";
 
     try {
-      await submitRegistration(payload);
-      console.log("[BOTD] Registration saved to Firestore", payload);
+      const result = await submitRegistration(payload);
+      console.log("[BOTD] Registration saved to Firestore and Storage", {
+        registrationId: result.id,
+        uploadSummary: result.uploadedFiles,
+      });
       successMessage?.classList.remove("is-hidden");
-      setStatus("Payment successful. Your registration has been submitted.", "is-success");
+      setStatus(PAYMENT_ENABLED ? "Payment successful. Your registration has been submitted." : "Registration submitted successfully.", "is-success");
       registrationForm.reset();
       syncGroupFields();
       updateUploadState(videoInput, videoName);
       updateUploadState(audioInput, audioName);
+      updateUploadState(photoInput, photoName);
+      updateUploadState(documentInput, documentName);
       registrationForm.querySelectorAll(".field").forEach((field) => field.classList.remove("is-filled", "is-success", "is-error"));
       syncSubmitState();
 
@@ -1514,7 +1554,7 @@ function setupRegistrationForm() {
       });
     } catch (error) {
       console.error("[BOTD] Registration submit failed", error);
-      setStatus("Payment succeeded, but registration upload failed. Please contact BOTD support.", "is-error");
+      setStatus("Registration upload failed. Please try again or contact BOTD support.", "is-error");
     }
   }
 
@@ -1534,8 +1574,17 @@ function setupRegistrationForm() {
     }
 
     successMessage?.classList.add("is-hidden");
-    setStatus("Preparing your payment...", "");
-    setButtonLoading(payButton, true, "Processing");
+    setStatus(PAYMENT_ENABLED ? "Preparing your payment..." : "Submitting your registration...", "");
+    setButtonLoading(payButton, true, PAYMENT_ENABLED ? "Processing" : "Submitting");
+
+    if (!PAYMENT_ENABLED) {
+      finalizeSubmission("payment-disabled")
+        .finally(() => {
+          setButtonLoading(payButton, false, "Submit Registration");
+          syncSubmitState();
+        });
+      return;
+    }
 
     const paymentOptions = {
       key: razorpayKey,
@@ -1600,11 +1649,22 @@ function setupRegistrationForm() {
   });
   videoInput?.addEventListener("change", () => updateUploadState(videoInput, videoName));
   audioInput?.addEventListener("change", () => updateUploadState(audioInput, audioName));
+  photoInput?.addEventListener("change", () => updateUploadState(photoInput, photoName));
+  documentInput?.addEventListener("change", () => updateUploadState(documentInput, documentName));
   payButton?.addEventListener("click", startPayment);
+
+  if (!PAYMENT_ENABLED) {
+    const paymentLabel = payButton?.querySelector(".payment-button-text");
+    if (paymentLabel) {
+      paymentLabel.textContent = "Submit Registration";
+    }
+  }
 
   syncGroupFields();
   updateUploadState(videoInput, videoName);
   updateUploadState(audioInput, audioName);
+  updateUploadState(photoInput, photoName);
+  updateUploadState(documentInput, documentName);
   syncSubmitState();
 }
 
@@ -1884,6 +1944,7 @@ function setupVotingPage() {
   const otpInput = document.getElementById("otp-input");
   const verifyVoteButton = document.getElementById("verify-vote");
   const recaptchaContainerId = "voting-recaptcha";
+  const deviceId = getPersistentDeviceId();
 
   populateCountryCodeOptions(countryCodeSelect);
 
@@ -1998,6 +2059,8 @@ function setupVotingPage() {
       await submitVote({
         participantId: selectedTeam.id,
         userId: user.uid,
+        phoneNumber: user.phoneNumber || mobileNumber,
+        deviceId,
       });
 
       console.log("[BOTD] Vote submitted", {
@@ -2007,11 +2070,7 @@ function setupVotingPage() {
       });
 
       setVoteStatus("Vote submitted successfully.", "is-success");
-      await showPopup({
-        title: "Vote Submitted",
-        text: `Thank you for voting ${selectedTeam.name}. Stay tuned for results.`,
-        primaryText: "Done",
-      });
+      triggerPartyBlastEffect();
       resetVotingFlow(true);
     } catch (error) {
       console.error("[BOTD] Vote submit failed", error);
@@ -2026,13 +2085,7 @@ function setupVotingPage() {
         otpSection?.classList.add("is-hidden");
       }
 
-      if ((error.message || "").toLowerCase().includes("already voted")) {
-        await showPopup({
-          title: "You Have Already Voted",
-          text: "You have already voted",
-          primaryText: "Okay",
-        });
-      } else if (failureMessage !== "Vote submission failed.") {
+      if (!(error.message || "").toLowerCase().includes("already voted")) {
         triggerVoteFieldAlert("otp-input");
       }
     } finally {
@@ -2232,6 +2285,3 @@ function initSite() {
 }
 
 initSite();
-
-
-
