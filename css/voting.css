@@ -363,6 +363,17 @@ body[data-theme="light"] .voting-hero-backdrop {
   gap: 18px;
 }
 
+.contestant-empty-state {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 28px 24px;
+  border-radius: 20px;
+  border: 1px dashed var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-soft);
+  text-align: center;
+}
+
 .vote-card-item {
   overflow: hidden;
   cursor: pointer;

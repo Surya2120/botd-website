@@ -53,6 +53,23 @@ const JUDGE_MAPPINGS = [
   { docId: "judge-b", prefix: "judge2" },
   { docId: "judge-c", prefix: "judge3" },
 ];
+const SPONSOR_TIER_CONFIG = [
+  { key: "presented-by", title: "Presented By", sectionClass: "sponsor-band-presented", gridClass: "sponsor-grid-feature", cardClass: "sponsor-logo-card-feature" },
+  { key: "powered-by", title: "Powered By", sectionClass: "sponsor-band-power", gridClass: "sponsor-grid-power", cardClass: "sponsor-logo-card-power" },
+  { key: "co-powered-by", title: "Co Powered By", sectionClass: "sponsor-band-power", gridClass: "sponsor-grid-power", cardClass: "sponsor-logo-card-power" },
+  { key: "associate-sponsors", title: "Associate Sponsors", sectionClass: "sponsor-band-associate", gridClass: "sponsor-grid-associate", cardClass: "sponsor-logo-card-associate" },
+  { key: "supporting-sponsor", title: "Supporting Sponsor", sectionClass: "sponsor-band-associate", gridClass: "sponsor-grid-associate", cardClass: "sponsor-logo-card-associate" },
+  { key: "venue-partner", title: "Venue Partner", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
+  { key: "media-partner", title: "Media Partner", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
+  { key: "social-media", title: "Social Media", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
+  { key: "influencer-partner", title: "Influencer Partner", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
+  { key: "academy-partner", title: "Academy Partner", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
+  { key: "fashion", title: "Fashion", sectionClass: "sponsor-band-brand", gridClass: "sponsor-grid-brand", cardClass: "sponsor-logo-card-brand", family: "Brand Partner" },
+  { key: "beauty", title: "Beauty", sectionClass: "sponsor-band-brand", gridClass: "sponsor-grid-brand", cardClass: "sponsor-logo-card-brand", family: "Brand Partner" },
+  { key: "fitness", title: "Fitness", sectionClass: "sponsor-band-brand", gridClass: "sponsor-grid-brand", cardClass: "sponsor-logo-card-brand", family: "Brand Partner" },
+  { key: "food-and-beverage", title: "Food & Beverage", sectionClass: "sponsor-band-utility", gridClass: "sponsor-grid-utility", cardClass: "sponsor-logo-card-utility", family: "Utility Partner" },
+  { key: "video-partner", title: "Video Partner", sectionClass: "sponsor-band-video", gridClass: "sponsor-grid-video", cardClass: "sponsor-logo-card-video" },
+];
 
 const confirmBox = document.getElementById("confirm-box");
 const confirmTeamName = document.getElementById("confirm-team-name");
@@ -746,7 +763,7 @@ function renderSeasonContestants() {
       const teams = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && team.isVisible !== false);
       return `
         <div class="tab-panel ${code === activeCode && index === 0 ? "is-active" : ""}" id="${code.toLowerCase()}" role="tabpanel">
-          <p class="contestant-meta">${teams.length ? `${teams.length} contestants available in ${category.name || code}.` : "No contestants available right now."}</p>
+          <p class="contestant-meta">${teams.length ? `${teams.length} contestants available in ${category.name || code}.` : "Contestants will be announcing soon."}</p>
           <div class="contestant-grid">
             ${teams.map((team) => `
               <article class="contestant-card">
@@ -878,37 +895,49 @@ function renderSponsors(items = []) {
     .filter((item) => item.visible !== false)
     .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0));
 
-  if (!visibleItems.length) {
-    host.innerHTML = "<p>No sponsors available right now.</p>";
-    return;
-  }
+  const slugifySponsorTier = (value) => String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
   const grouped = visibleItems.reduce((accumulator, item) => {
-    const tier = String(item.tier || item.category || "Sponsors");
-    if (!accumulator[tier]) {
-      accumulator[tier] = [];
+    const key = slugifySponsorTier(item.tier || item.category || "sponsors");
+    if (!accumulator[key]) {
+      accumulator[key] = [];
     }
-    accumulator[tier].push(item);
+    accumulator[key].push(item);
     return accumulator;
   }, {});
 
-  host.innerHTML = Object.entries(grouped).map(([tier, tierItems], index) => `
-    <div class="sponsor-category reveal is-visible ${index % 3 === 1 ? "reveal-delay-1" : index % 3 === 2 ? "reveal-delay-2" : ""}">
-      <div class="sponsor-category-head">
-        <h3>${tier} Sponsors</h3>
-      </div>
-      <div class="sponsor-grid sponsor-grid-silver">
-        ${tierItems.map((item) => `
-          <article class="sponsor-logo-card sponsor-logo-card-silver">
-            ${item.link ? `<a href="${item.link}" target="_blank" rel="noreferrer">` : ""}
-              ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:120px;object-fit:cover;border-radius:12px;">` : `<div class="sponsor-placeholder sponsor-placeholder-md">${item.name.slice(0, 3).toUpperCase()}</div>`}
-            ${item.link ? "</a>" : ""}
-            <p>${item.name}</p>
-          </article>
-        `).join("")}
-      </div>
-    </div>
-  `).join("");
+  host.innerHTML = SPONSOR_TIER_CONFIG.map((tier, index) => {
+    const tierItems = grouped[tier.key] || [];
+    const familyMarkup = tier.family ? `<p class="sponsor-family-label">${tier.family}</p>` : "";
+
+    return `
+      <section class="sponsor-category ${tier.sectionClass} reveal is-visible ${index % 3 === 1 ? "reveal-delay-1" : index % 3 === 2 ? "reveal-delay-2" : ""}">
+        <div class="sponsor-category-head">
+          ${familyMarkup}
+          <h3>${tier.title}</h3>
+        </div>
+        <div class="sponsor-grid ${tier.gridClass}">
+          ${tierItems.length ? tierItems.map((item) => `
+            <article class="sponsor-logo-card ${tier.cardClass}">
+              ${item.link ? `<a href="${item.link}" target="_blank" rel="noreferrer">` : ""}
+                ${item.image ? `<img src="${item.image}" alt="${item.name}" class="sponsor-logo-image">` : `<div class="sponsor-placeholder sponsor-placeholder-md">${String(item.name || tier.title).slice(0, 3).toUpperCase()}</div>`}
+              ${item.link ? "</a>" : ""}
+              <p>${item.name}</p>
+            </article>
+          `).join("") : `
+            <article class="sponsor-empty-slot">
+              <p>${tier.title} slot available</p>
+            </article>
+          `}
+        </div>
+      </section>
+    `;
+  }).join("");
 }
 
 function loadSponsorsRealtime() {
@@ -1839,7 +1868,7 @@ function renderVotingShell() {
 
   if (!activeCategories.length) {
     tabList.innerHTML = "<p>No categories available.</p>";
-    panelHost.innerHTML = "<p>No contestants available right now.</p>";
+    panelHost.innerHTML = "<p class=\"contestant-empty-state\">Contestants will be announcing soon.</p>";
     return;
   }
 
@@ -1868,7 +1897,7 @@ function renderVotingShell() {
               <p>${team.city || "Bangalore"}</p>
               ${liveUiControls.showVotes ? `<div class="vote-count-badge" aria-live="polite"><span>Votes</span><strong data-animated-count="${team.id}">${getVoteCountForTeam(team.id)}</strong></div>` : ""}
             </article>
-          `).join("") : "<p>No contestants available in this category.</p>"}
+          `).join("") : "<p class=\"contestant-empty-state\">Contestants will be announcing soon.</p>"}
         </div>
       </div>
     `;
