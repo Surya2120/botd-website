@@ -243,22 +243,26 @@
                         <option value="Advanced">Advanced</option>
                       </select>
                     </label>
+                    <label class="field form-grid-full">
+                      <span>Video Link (YouTube)</span>
+                      <input type="url" name="videoLink" placeholder="Paste your YouTube performance link" required>
+                    </label>
                   </div>
 
                   <div class="section-break">
-                    <h3>Uploads</h3>
+                    <h3>Optional Uploads</h3>
                   </div>
 
                   <div class="upload-grid">
                     <label class="upload-field">
                       <span class="upload-label">Upload Video (MP4)</span>
-                      <input type="file" name="videoFile" id="video-file" accept=".mp4,video/mp4" required>
+                      <input type="file" name="videoFile" id="video-file" accept=".mp4,video/mp4">
                       <span class="upload-button">Choose Video</span>
                       <span class="upload-file-name" id="video-file-name">No file selected</span>
                     </label>
                     <label class="upload-field">
                       <span class="upload-label">Upload Audio Track (MP3/WAV)</span>
-                      <input type="file" name="audioFile" id="audio-file" accept=".mp3,.wav,audio/mpeg,audio/wav" required>
+                      <input type="file" name="audioFile" id="audio-file" accept=".mp3,.wav,audio/mpeg,audio/wav">
                       <span class="upload-button">Choose Audio</span>
                       <span class="upload-file-name" id="audio-file-name">No file selected</span>
                     </label>
@@ -266,7 +270,7 @@
 
                   <label class="agreement">
                     <input type="checkbox" name="agreement" id="agreement" required>
-                    <span>I agree to BOTD rules and allow media usage</span>
+                    <span>I agree to the <button type="button" class="agreement-link" id="open-terms-modal">Terms &amp; Conditions</button> and allow media usage</span>
                   </label>
 
                   <div class="payment-panel">
@@ -290,6 +294,26 @@
           </div>
         </div>
       </section>
+
+      <div class="terms-modal" id="terms-modal" aria-hidden="true">
+        <div class="terms-modal-panel" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title">
+          <button class="terms-modal-close" id="close-terms-modal" type="button" aria-label="Close Terms & Conditions">&times;</button>
+          <p class="eyebrow">Terms &amp; Conditions</p>
+          <h2 id="terms-modal-title">BOTD Terms &amp; Conditions</h2>
+          <div class="terms-modal-body">
+            <p>By submitting your BOTD registration, you confirm that the performance video belongs to you or your team and that all details entered are accurate.</p>
+            <p>You agree that BOTD may review, shortlist, and use submitted content for judging, promotional previews, and competition-related communication.</p>
+            <p>You also understand that incomplete, misleading, offensive, or duplicate submissions may be rejected without notice.</p>
+            <p>Entry fees, if applicable, are non-refundable once the registration is successfully submitted.</p>
+            <p>BOTD reserves the right to update competition schedules, screening rules, and participation eligibility whenever required for operational or safety reasons.</p>
+            <p>Placeholder copy can be replaced with your final legal text at any time without changing the layout.</p>
+          </div>
+          <div class="terms-modal-actions">
+            <button class="button button-secondary" id="dismiss-terms-modal" type="button">Close</button>
+            <button class="button button-primary" id="accept-terms-modal" type="button">I Understand</button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <footer class="footer">
@@ -332,6 +356,6 @@
   </div>
 
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <script src="js/script.js"></script>
+  <script type="module" src="js/script.js"></script>
 </body>
 </html>

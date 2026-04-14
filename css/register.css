@@ -226,6 +226,10 @@ body[data-theme="light"] .registration-card {
   gap: 20px;
 }
 
+.form-grid-full {
+  grid-column: 1 / -1;
+}
+
 .field {
   display: grid;
   gap: 12px;
@@ -412,6 +416,84 @@ body[data-theme="light"] .field select {
   accent-color: var(--gold);
 }
 
+.agreement-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gold-soft);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.terms-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 220ms ease, visibility 220ms ease;
+}
+
+.terms-modal.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.terms-modal-panel {
+  position: relative;
+  width: min(680px, 100%);
+  max-height: min(82vh, 760px);
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+  border-radius: 28px;
+  border: 1px solid var(--line-strong);
+  background:
+    radial-gradient(circle at top right, rgba(255, 210, 122, 0.08), transparent 28%),
+    linear-gradient(180deg, var(--surface), var(--surface-strong));
+  box-shadow: var(--shadow);
+}
+
+.terms-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.terms-modal-body {
+  overflow: auto;
+  padding-right: 6px;
+  color: var(--text-soft);
+  line-height: 1.8;
+}
+
+.terms-modal-body p {
+  margin: 0 0 14px;
+}
+
+.terms-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .payment-panel {
   display: flex;
   align-items: center;
@@ -530,6 +612,10 @@ body[data-theme="light"] .field select {
     width: 100%;
     min-width: 0;
   }
+
+  .terms-modal-panel {
+    padding: 24px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -549,5 +635,13 @@ body[data-theme="light"] .field select {
 
   .registration-form {
     gap: 24px;
+  }
+
+  .terms-modal {
+    padding: 16px;
+  }
+
+  .terms-modal-panel {
+    padding: 22px;
   }
 }

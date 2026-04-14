@@ -1,14 +1,9 @@
 import {
   collection,
   doc,
-  getDocs,
-  increment,
-  limit,
   onSnapshot,
-  query,
   runTransaction,
   serverTimestamp,
-  where
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -22,34 +17,47 @@ export function subscribeTeams(onData, onError) {
   );
 }
 
-export async function submitVote({ teamId, teamName, categoryId, mobileNumber }) {
-  const voteRef = collection(db, "votes");
-  const existingVote = await getDocs(query(voteRef, where("mobileNumber", "==", mobileNumber), limit(1)));
+export function subscribeVoteTallies(onData, onError) {
+  return onSnapshot(
+    collection(db, "votes"),
+    (snap) => {
+      const tallies = {};
+      snap.forEach((docItem) => {
+        tallies[docItem.id] = docItem.data();
+      });
+      onData(tallies);
+    },
+    onError
+  );
+}
 
-  if (!existingVote.empty) {
-    throw new Error("This mobile number has already voted.");
-  }
-
+export async function submitVote({ participantId, userId }) {
   await runTransaction(db, async (transaction) => {
-    const teamRef = doc(db, "teams", teamId);
+    const voteDocRef = doc(db, "votes", participantId);
+    const teamRef = doc(db, "teams", participantId);
+    const voteSnap = await transaction.get(voteDocRef);
     const teamSnap = await transaction.get(teamRef);
+    const voteData = voteSnap.exists() ? voteSnap.data() : {};
+    const existingVoters = Array.isArray(voteData.voters) ? voteData.voters : [];
+
+    if (existingVoters.includes(userId)) {
+      throw new Error("You have already voted");
+    }
 
     if (!teamSnap.exists()) {
       throw new Error("Selected team does not exist.");
     }
 
-    transaction.update(teamRef, {
-      votes: increment(1),
-      updatedAt: serverTimestamp()
-    });
+    const nextVoteCount = Number(voteData.voteCount || 0) + 1;
+    transaction.set(voteDocRef, {
+      voteCount: nextVoteCount,
+      voters: [...existingVoters, userId],
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
 
-    const newVoteRef = doc(voteRef);
-    transaction.set(newVoteRef, {
-      teamId,
-      teamName,
-      categoryId,
-      mobileNumber,
-      createdAt: serverTimestamp()
-    });
+    transaction.set(teamRef, {
+      votes: nextVoteCount,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
   });
 }

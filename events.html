@@ -53,15 +53,15 @@
         <div class="hero-grid-lines" aria-hidden="true"></div>
         <div class="container events-hero-content">
           <div class="events-hero-copy reveal">
-            <p class="eyebrow">BOTD Events</p>
-            <h1>BOTD Events</h1>
-            <p class="hero-subtitle">Experience the journey from audition to stage.</p>
-            <p class="hero-text">Track every step of Season 1.</p>
+            <p class="eyebrow" id="events-hero-eyebrow">BOTD Events</p>
+            <h1 id="events-hero-title">BOTD Events</h1>
+            <p class="hero-subtitle" id="events-hero-subtitle">Experience the journey from audition to stage.</p>
+            <p class="hero-text" id="events-hero-description">Track every step of Season 1.</p>
           </div>
 
           <div class="events-hero-visual reveal reveal-delay-1">
             <div class="events-hero-poster">
-              <img src="assets/images/poster3.jpg" alt="BOTD event poster">
+              <img id="events-hero-image" src="assets/images/poster3.jpg" alt="BOTD event poster">
             </div>
           </div>
         </div>
@@ -71,25 +71,25 @@
         <div class="container">
           <div class="season-event-banner reveal">
             <div class="season-event-copy">
-              <p class="eyebrow">Season 1 Highlight</p>
-              <h2>Season 1 - Bangalore Edition</h2>
-              <p class="season-event-text">The first BOTD season begins here, with a structured journey from submission to final recognition.</p>
+              <p class="eyebrow" id="events-banner-eyebrow">Season 1 Highlight</p>
+              <h2 id="events-banner-title">Season 1 - Bangalore Edition</h2>
+              <p class="season-event-text" id="events-banner-description">The first BOTD season begins here, with a structured journey from submission to final recognition.</p>
             </div>
 
             <div class="season-event-meta">
               <div class="season-event-meta-card">
                 <span>Location</span>
-                <strong>TBA</strong>
+                <strong id="events-banner-location">TBA</strong>
               </div>
               <div class="season-event-meta-card">
                 <span>Date</span>
-                <strong>TBA</strong>
+                <strong id="events-banner-date">TBA</strong>
               </div>
               <div class="season-event-meta-card">
                 <span>Venue</span>
-                <strong>TBA</strong>
+                <strong id="events-banner-venue">TBA</strong>
               </div>
-              <a class="button button-primary season-event-button" href="register.html">Register Now</a>
+              <a class="button button-primary season-event-button" id="events-banner-cta" href="register.html">Register Now</a>
             </div>
           </div>
         </div>
@@ -103,7 +103,7 @@
             <p>Each phase is designed to move dancers from digital submission to live recognition through a clear competition flow.</p>
           </div>
 
-          <div class="event-timeline">
+          <div class="event-timeline" id="events-timeline">
             <article class="timeline-item reveal">
               <div class="timeline-marker">
                 <span class="timeline-step">1</span>
@@ -179,7 +179,7 @@
             <h2>A closer look at each stage of Season 1</h2>
           </div>
 
-          <div class="event-card-grid">
+          <div class="event-card-grid" id="events-stage-cards">
             <article class="event-stage-card reveal">
               <div class="event-stage-top">
                 <h3>Audition Round</h3>
@@ -229,7 +229,7 @@
           <div class="important-notes reveal">
             <p class="eyebrow">Important Notes</p>
             <h2>Keep these essentials in mind</h2>
-            <ul class="simple-list">
+            <ul class="simple-list" id="events-notes-list">
               <li>Participants must follow assigned time slots</li>
               <li>Updates will be shared through official channels</li>
               <li>Only selected participants proceed to next stages</li>
@@ -289,6 +289,6 @@
     </footer>
   </div>
 
-  <script src="js/script.js"></script>
+  <script type="module" src="js/script.js"></script>
 </body>
 </html>

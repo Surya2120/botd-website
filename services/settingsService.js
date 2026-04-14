@@ -36,4 +36,80 @@ export async function ensureSettingsDocument() {
     },
     { merge: true }
   );
+
+  await setDoc(
+    doc(db, "settings", "uiControls"),
+    {
+      showVotes: false,
+      showLeaderboard: true,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  await setDoc(
+    doc(db, "settings", "events"),
+    {
+      partyBlast: null,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+export function subscribeUiControls(onData, onError) {
+  return onSnapshot(
+    doc(db, "settings", "uiControls"),
+    (snap) => {
+      onData(snap.exists() ? snap.data() : { showVotes: false, showLeaderboard: true });
+    },
+    onError
+  );
+}
+
+export async function updateUiControls(partialControls = {}) {
+  await setDoc(
+    doc(db, "settings", "uiControls"),
+    {
+      ...partialControls,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+export function subscribeVoteVisibility(onData, onError) {
+  return subscribeUiControls(
+    (data) => onData({ showVotes: Boolean(data?.showVotes), showLeaderboard: Boolean(data?.showLeaderboard) }),
+    onError
+  );
+}
+
+export async function setVoteVisibility(showVotes) {
+  await updateUiControls({ showVotes: Boolean(showVotes) });
+}
+
+export async function setLeaderboardVisibility(showLeaderboard) {
+  await updateUiControls({ showLeaderboard: Boolean(showLeaderboard) });
+}
+
+export function subscribeEventSignals(onData, onError) {
+  return onSnapshot(
+    doc(db, "settings", "events"),
+    (snap) => {
+      onData(snap.exists() ? snap.data() : { partyBlast: null });
+    },
+    onError
+  );
+}
+
+export async function triggerPartyBlast() {
+  await setDoc(
+    doc(db, "settings", "events"),
+    {
+      partyBlast: Date.now(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
