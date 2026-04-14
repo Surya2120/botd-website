@@ -234,18 +234,15 @@
                         <option value="Other">Other</option>
                       </select>
                     </label>
-                    <label class="field">
-                      <span>Experience Level</span>
-                      <select name="experienceLevel" required>
-                        <option value="">Select level</option>
-                        <option value="Beginner">Beginner</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
-                      </select>
-                    </label>
                     <label class="field form-grid-full">
-                      <span>Video Link (YouTube)</span>
-                      <input type="url" name="videoLink" placeholder="Paste your YouTube performance link" required>
+                      <span>How u got to know about BOTD</span>
+                      <select name="discoverySource" required>
+                        <option value="">Select source</option>
+                        <option value="Social Media">Social Media</option>
+                        <option value="Someone referred">Someone referred</option>
+                        <option value="Found by self in internet">Found by self in internet</option>
+                        <option value="Others">Others</option>
+                      </select>
                     </label>
                   </div>
 
@@ -267,23 +264,69 @@
                       <span class="upload-file-name" id="audio-file-name">No file selected</span>
                     </label>
                     <label class="upload-field">
-                      <span class="upload-label">Upload Photos</span>
-                      <input type="file" name="photoFiles" id="photo-files" accept="image/*" multiple>
-                      <span class="upload-button">Choose Photos</span>
-                      <span class="upload-file-name" id="photo-file-name">No files selected</span>
-                    </label>
-                    <label class="upload-field">
-                      <span class="upload-label">Upload Documents</span>
-                      <input type="file" name="documentFiles" id="document-files" accept=".pdf,.doc,.docx,image/*" multiple>
-                      <span class="upload-button">Choose Documents</span>
-                      <span class="upload-file-name" id="document-file-name">No files selected</span>
+                      <span class="upload-label">Upload You/Team Photo for Display Picture</span>
+                      <input type="file" name="photoFiles" id="photo-files" accept="image/*" required>
+                      <span class="upload-button">Choose Display Photo</span>
+                      <span class="upload-file-name" id="photo-file-name">No file selected</span>
                     </label>
                   </div>
 
-                  <label class="agreement">
-                    <input type="checkbox" name="agreement" id="agreement" required>
-                    <span>I agree to the <button type="button" class="agreement-link" id="open-terms-modal">Terms &amp; Conditions</button> and allow media usage</span>
-                  </label>
+                  <div class="guardian-section is-hidden" id="guardian-section">
+                    <div class="guardian-section-copy">
+                      <p class="eyebrow">Minor Consent</p>
+                      <h3>Parent / Legal Guardian Details</h3>
+                      <p>Participants under 18 require parent or legal guardian consent before submission can be accepted.</p>
+                    </div>
+                    <div class="form-grid">
+                      <label class="field">
+                        <span>Parent / Guardian Name</span>
+                        <input type="text" name="parentName" placeholder="Enter parent or guardian name">
+                      </label>
+                      <label class="field">
+                        <span>Parent / Guardian Phone</span>
+                        <input type="tel" name="parentPhone" placeholder="Enter parent or guardian phone">
+                      </label>
+                      <label class="field">
+                        <span>Parent / Guardian Email</span>
+                        <input type="email" name="parentEmail" placeholder="Enter parent or guardian email">
+                      </label>
+                      <label class="field">
+                        <span>Relationship</span>
+                        <input type="text" name="relationship" placeholder="Example: Mother / Father / Guardian">
+                      </label>
+                    </div>
+                    <label class="consent-check">
+                      <input type="checkbox" name="guardianConsent" id="guardian-consent">
+                      <span>I confirm I am the parent/legal guardian and give consent.</span>
+                    </label>
+                    <label class="field terms-sign-field">
+                      <span>Parent / Guardian Digital Signature</span>
+                      <input type="text" name="guardianSignature" placeholder="Type parent or guardian full name as signature">
+                    </label>
+                  </div>
+
+                  <div class="terms-embed">
+                    <div class="terms-embed-copy">
+                      <h3>Consent &amp; Legal Clauses</h3>
+                      <p>I declare that all information submitted in this registration is accurate and complete.</p>
+                      <p>I grant BOTD full media release rights to use submitted names, photos, audio, and video for judging, promotions, marketing, social media, and platform publicity.</p>
+                      <p>I understand BOTD is not responsible for injury, accident, technical loss, or personal/property damage related to participation.</p>
+                      <p>I understand registration fees, if enabled and collected, are non-refundable after successful submission.</p>
+                      <p>I accept BOTD rules, judging criteria, and final decisions as binding.</p>
+                      <p>I understand BOTD reserves the right to reject or disqualify entries that are incomplete, misleading, duplicated, offensive, or rule-violating.</p>
+                      <p>I accept that BOTD schedules, stages, and event timelines may change whenever operationally necessary.</p>
+                      <p>Any disputes relating to this registration are subject to the applicable jurisdiction chosen by BOTD.</p>
+                      <p>By signing, I agree this is a legally binding digital consent.</p>
+                    </div>
+                    <label class="consent-check">
+                      <input type="checkbox" name="participantConsent" id="participant-consent" required>
+                      <span>I have read and accept the BOTD consent clauses above.</span>
+                    </label>
+                    <label class="field terms-sign-field">
+                      <span>Participant Digital Signature</span>
+                      <input type="text" name="digitalSignature" placeholder="Type your full name as signature" required>
+                    </label>
+                  </div>
 
                   <div class="payment-panel">
                     <div>
@@ -295,10 +338,13 @@
                     </button>
                   </div>
 
+                  <div class="upload-progress is-hidden" id="upload-progress" aria-hidden="true">
+                    <span class="upload-progress-bar" id="upload-progress-bar"></span>
+                  </div>
                   <p class="form-status" id="form-status" aria-live="polite"></p>
                   <div class="success-message is-hidden" id="success-message">
                     <h3>Registration received</h3>
-                    <p>Your audition details and uploads have been stored successfully.</p>
+                    <p>Your BOTD registration PDF, form details, and uploads have been stored successfully.</p>
                   </div>
                 </form>
               </div>
@@ -307,25 +353,6 @@
         </div>
       </section>
 
-      <div class="terms-modal" id="terms-modal" aria-hidden="true">
-        <div class="terms-modal-panel" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title">
-          <button class="terms-modal-close" id="close-terms-modal" type="button" aria-label="Close Terms & Conditions">&times;</button>
-          <p class="eyebrow">Terms &amp; Conditions</p>
-          <h2 id="terms-modal-title">BOTD Terms &amp; Conditions</h2>
-          <div class="terms-modal-body">
-            <p>By submitting your BOTD registration, you confirm that the performance video belongs to you or your team and that all details entered are accurate.</p>
-            <p>You agree that BOTD may review, shortlist, and use submitted content for judging, promotional previews, and competition-related communication.</p>
-            <p>You also understand that incomplete, misleading, offensive, or duplicate submissions may be rejected without notice.</p>
-            <p>Entry fees, if applicable, are non-refundable once the registration is successfully submitted.</p>
-            <p>BOTD reserves the right to update competition schedules, screening rules, and participation eligibility whenever required for operational or safety reasons.</p>
-            <p>Placeholder copy can be replaced with your final legal text at any time without changing the layout.</p>
-          </div>
-          <div class="terms-modal-actions">
-            <button class="button button-secondary" id="dismiss-terms-modal" type="button">Close</button>
-            <button class="button button-primary" id="accept-terms-modal" type="button">I Understand</button>
-          </div>
-        </div>
-      </div>
     </main>
 
     <footer class="footer">

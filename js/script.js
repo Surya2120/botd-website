@@ -1,6 +1,8 @@
 import {
   collection,
   doc,
+  getDoc,
+  getDocs,
   onSnapshot,
   query,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
@@ -41,6 +43,8 @@ const LOGO_PATH = "assets/images/Final_BOTD_Logo.png";
 const CONTENT_COLLECTION = "adminContent";
 const JUDGES_COLLECTION = "judges";
 const SPONSORS_COLLECTION = "sponsors";
+const CACHE_TTL_MS = 1000 * 60 * 10;
+const LOADING_TIMEOUT_MS = 2400;
 
 const CONTENT_DOCS = {
   season: "seasonPage",
@@ -667,6 +671,24 @@ function initializeAdminConsole() {
 
 function subscribeToDocument(collectionName, documentId, onData) {
   try {
+    const cached = readCachedPayload(collectionName, documentId);
+    if (cached) {
+      onData(cached);
+    }
+
+    getDoc(doc(db, collectionName, documentId))
+      .then((snapshot) => {
+        if (!snapshot.exists()) {
+          return;
+        }
+        const data = snapshot.data();
+        writeCachedPayload(collectionName, documentId, data);
+        onData(data);
+      })
+      .catch((error) => {
+        console.error(`Failed to prime ${collectionName}/${documentId}`, error);
+      });
+
     const unsubscribe = onSnapshot(
       doc(db, collectionName, documentId),
       (snapshot) => {
@@ -676,6 +698,7 @@ function subscribeToDocument(collectionName, documentId, onData) {
         }
 
         console.log(`[BOTD] Realtime update: ${collectionName}/${documentId}`);
+        writeCachedPayload(collectionName, documentId, snapshot.data());
         onData(snapshot.data());
       },
       (error) => {
@@ -695,13 +718,68 @@ function registerSubscription(unsubscribe) {
   }
 }
 
+function getCacheKey(scope, key) {
+  return `botd-cache:${scope}:${key}`;
+}
+
+function readCachedPayload(scope, key) {
+  try {
+    const rawValue = localStorage.getItem(getCacheKey(scope, key));
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsed = JSON.parse(rawValue);
+    if (!parsed?.timestamp || !parsed?.data) {
+      return null;
+    }
+
+    if ((Date.now() - parsed.timestamp) > CACHE_TTL_MS) {
+      localStorage.removeItem(getCacheKey(scope, key));
+      return null;
+    }
+
+    return parsed.data;
+  } catch (error) {
+    console.warn("[BOTD] Failed to read cache", scope, key, error);
+    return null;
+  }
+}
+
+function writeCachedPayload(scope, key, data) {
+  try {
+    localStorage.setItem(getCacheKey(scope, key), JSON.stringify({
+      timestamp: Date.now(),
+      data,
+    }));
+  } catch (error) {
+    console.warn("[BOTD] Failed to write cache", scope, key, error);
+  }
+}
+
 function subscribeToCollection(collectionName, onData) {
   try {
+    const cached = readCachedPayload("collection", collectionName);
+    if (cached) {
+      onData(cached);
+    }
+
+    getDocs(collection(db, collectionName))
+      .then((snapshot) => {
+        const items = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+        writeCachedPayload("collection", collectionName, items);
+        onData(items);
+      })
+      .catch((error) => {
+        console.error(`Failed to prime collection ${collectionName}`, error);
+      });
+
     const unsubscribe = onSnapshot(
       query(collection(db, collectionName)),
       (snapshot) => {
         const items = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
         console.log(`[BOTD] Realtime update: ${collectionName}`, items.length);
+        writeCachedPayload("collection", collectionName, items);
         onData(items);
       },
       (error) => {
@@ -993,14 +1071,26 @@ function createLoadingScreen() {
 }
 
 function hideLoadingScreen() {
-  if (!loadingScreen) {
+  if (!loadingScreen || loadingScreen.dataset.hidden === "true") {
     return;
   }
 
+  loadingScreen.dataset.hidden = "true";
   window.setTimeout(() => {
     loadingScreen.classList.add("is-hidden");
     window.setTimeout(() => loadingScreen?.remove(), 500);
   }, 260);
+}
+
+function prepareMediaLoading() {
+  document.querySelectorAll("img").forEach((image, index) => {
+    if (!image.hasAttribute("loading")) {
+      image.setAttribute("loading", index < 4 ? "eager" : "lazy");
+    }
+    if (!image.hasAttribute("decoding")) {
+      image.setAttribute("decoding", "async");
+    }
+  });
 }
 
 function createPopup() {
@@ -1385,49 +1475,6 @@ function setupFieldStates(scope = document) {
   });
 }
 
-function setupTermsModal(agreementInput) {
-  const modal = document.getElementById("terms-modal");
-  const openButton = document.getElementById("open-terms-modal");
-  const closeButton = document.getElementById("close-terms-modal");
-  const dismissButton = document.getElementById("dismiss-terms-modal");
-  const acceptButton = document.getElementById("accept-terms-modal");
-
-  if (!modal || !openButton) {
-    return;
-  }
-
-  const closeModal = () => {
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
-  };
-
-  const openModal = () => {
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
-  };
-
-  openButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    openModal();
-  });
-  closeButton?.addEventListener("click", closeModal);
-  dismissButton?.addEventListener("click", closeModal);
-  acceptButton?.addEventListener("click", () => {
-    if (agreementInput) {
-      agreementInput.checked = true;
-      agreementInput.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-    closeModal();
-  });
-
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      closeModal();
-    }
-  });
-}
-
 function setupRegistrationForm() {
   if (!registrationForm) {
     return;
@@ -1435,24 +1482,32 @@ function setupRegistrationForm() {
 
   const PAYMENT_ENABLED = false;
   const categorySelect = registrationForm.querySelector("#category-select");
+  const ageInput = registrationForm.querySelector('input[name="age"]');
   const groupFields = registrationForm.querySelector("#group-fields");
+  const guardianSection = registrationForm.querySelector("#guardian-section");
   const teamNameInput = registrationForm.querySelector('input[name="teamName"]');
   const memberCountInput = registrationForm.querySelector('input[name="memberCount"]');
+  const parentNameInput = registrationForm.querySelector('input[name="parentName"]');
+  const parentPhoneInput = registrationForm.querySelector('input[name="parentPhone"]');
+  const parentEmailInput = registrationForm.querySelector('input[name="parentEmail"]');
+  const relationshipInput = registrationForm.querySelector('input[name="relationship"]');
+  const guardianConsentInput = registrationForm.querySelector("#guardian-consent");
+  const guardianSignatureInput = registrationForm.querySelector('input[name="guardianSignature"]');
+  const participantConsentInput = registrationForm.querySelector("#participant-consent");
   const videoInput = registrationForm.querySelector("#video-file");
   const audioInput = registrationForm.querySelector("#audio-file");
   const photoInput = registrationForm.querySelector("#photo-files");
-  const documentInput = registrationForm.querySelector("#document-files");
   const videoName = registrationForm.querySelector("#video-file-name");
   const audioName = registrationForm.querySelector("#audio-file-name");
   const photoName = registrationForm.querySelector("#photo-file-name");
-  const documentName = registrationForm.querySelector("#document-file-name");
   const payButton = registrationForm.querySelector("#pay-submit");
   const statusMessage = registrationForm.querySelector("#form-status");
   const successMessage = registrationForm.querySelector("#success-message");
-  const agreement = registrationForm.querySelector("#agreement");
+  const uploadProgress = registrationForm.querySelector("#upload-progress");
+  const uploadProgressBar = registrationForm.querySelector("#upload-progress-bar");
+  const termsToggle = registrationForm.querySelector("#terms-inline-toggle");
+  const termsFull = registrationForm.querySelector("#terms-inline-full");
   const razorpayKey = "rzp_test_Sak3fjFZSi65XA";
-
-  setupTermsModal(agreement);
 
   function setStatus(message, tone) {
     if (!statusMessage) {
@@ -1482,6 +1537,22 @@ function setupRegistrationForm() {
     wrapper?.classList.remove("is-error");
   }
 
+  function checkMinor() {
+    const age = Number(ageInput?.value || 0);
+    return age > 0 && age < 18;
+  }
+
+  function setUploadProgress(value) {
+    if (!uploadProgress || !uploadProgressBar) {
+      return;
+    }
+
+    const percent = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+    uploadProgress.classList.toggle("is-hidden", percent <= 0 || percent >= 100);
+    uploadProgress.setAttribute("aria-hidden", percent <= 0 || percent >= 100 ? "true" : "false");
+    uploadProgressBar.style.width = `${percent}%`;
+  }
+
   function syncGroupFields() {
     const isGroupCategory = categorySelect && /Group/i.test(categorySelect.value);
 
@@ -1504,8 +1575,71 @@ function setupRegistrationForm() {
     }
   }
 
+  function syncGuardianFields() {
+    const isMinor = checkMinor();
+    guardianSection?.classList.toggle("is-hidden", !isMinor);
+
+    [
+      parentNameInput,
+      parentPhoneInput,
+      parentEmailInput,
+      relationshipInput,
+      guardianSignatureInput,
+    ].forEach((control) => {
+      if (!control) {
+        return;
+      }
+
+      control.required = isMinor;
+      if (!isMinor) {
+        control.value = "";
+        control.closest(".field")?.classList.remove("is-filled", "is-error", "is-success");
+      }
+    });
+
+    if (guardianConsentInput) {
+      if (!isMinor) {
+        guardianConsentInput.checked = false;
+      }
+    }
+  }
+
+  function validateForm() {
+    if (!registrationForm.reportValidity()) {
+      return { valid: false, message: "Please complete all required fields before continuing." };
+    }
+
+    if (!participantConsentInput?.checked) {
+      return { valid: false, message: "Please accept the BOTD legal consent clauses before continuing." };
+    }
+
+    if (checkMinor()) {
+      if (!guardianConsentInput?.checked) {
+        return { valid: false, message: "Parent or legal guardian consent is required for minors." };
+      }
+
+      if (!guardianSignatureInput?.value.trim()) {
+        return { valid: false, message: "Parent or legal guardian digital signature is required for minors." };
+      }
+    }
+
+    return { valid: true };
+  }
+
   function isFormReady() {
-    return registrationForm.checkValidity() && Boolean(agreement?.checked);
+    if (!registrationForm.checkValidity()) {
+      return false;
+    }
+
+    if (!participantConsentInput?.checked) {
+      return false;
+    }
+
+    if (!checkMinor()) {
+      return true;
+    }
+
+    return Boolean(guardianConsentInput?.checked) && Boolean(guardianSignatureInput?.value.trim());
   }
 
   function syncSubmitState() {
@@ -1515,25 +1649,41 @@ function setupRegistrationForm() {
   }
 
   function collectFormData() {
-    const videoLink = registrationForm.videoLink.value.trim();
+    const termsCopyRoot = registrationForm.querySelector(".terms-embed-copy");
+    const termsText = termsCopyRoot
+      ? Array.from(termsCopyRoot.querySelectorAll("p")).map((item) => item.textContent.trim()).join(" ")
+      : "";
+    const isMinor = checkMinor();
 
     return {
       name: registrationForm.fullName.value.trim(),
       phone: registrationForm.phone.value.trim(),
       email: registrationForm.email.value.trim(),
+      isMinor,
       teamName: registrationForm.teamName.value.trim() || registrationForm.fullName.value.trim(),
       danceStyle: registrationForm.danceStyle.value,
       city: registrationForm.city.value.trim(),
       age: registrationForm.age.value.trim(),
       category: registrationForm.category.value,
       memberCount: registrationForm.memberCount.value.trim(),
-      experienceLevel: registrationForm.experienceLevel.value,
-      videoLink,
+      discoverySource: registrationForm.discoverySource.value,
+      digitalSignature: registrationForm.digitalSignature.value.trim(),
+      signatureType: "typed",
+      signedAt: new Date().toISOString(),
+      parentName: isMinor ? parentNameInput?.value.trim() || "" : "",
+      parentPhone: isMinor ? parentPhoneInput?.value.trim() || "" : "",
+      parentEmail: isMinor ? parentEmailInput?.value.trim() || "" : "",
+      relationship: isMinor ? relationshipInput?.value.trim() || "" : "",
+      guardianSignature: isMinor ? guardianSignatureInput?.value.trim() || "" : "",
       paymentEnabled: PAYMENT_ENABLED,
       paymentStatus: PAYMENT_ENABLED ? "paid" : "disabled",
       paymentReference: "",
       details: {
-        agreementAccepted: Boolean(agreement?.checked),
+        agreementAccepted: Boolean(participantConsentInput?.checked),
+        guardianConsentAccepted: Boolean(guardianConsentInput?.checked),
+        digitalSignature: registrationForm.digitalSignature.value.trim(),
+        guardianSignature: guardianSignatureInput?.value.trim() || "",
+        termsAcceptedText: termsText,
         paymentAmount: 99,
         paymentCurrency: "INR",
         paymentReference: "",
@@ -1541,14 +1691,13 @@ function setupRegistrationForm() {
           videoFileName: videoInput?.files?.[0]?.name || "",
           audioFileName: audioInput?.files?.[0]?.name || "",
           photoFileNames: Array.from(photoInput?.files || []).map((file) => file.name),
-          documentFileNames: Array.from(documentInput?.files || []).map((file) => file.name),
         },
       },
       files: {
         video: videoInput?.files?.[0] || null,
         audio: audioInput?.files?.[0] || null,
         photos: Array.from(photoInput?.files || []),
-        documents: Array.from(documentInput?.files || []),
+        documents: [],
       },
     };
   }
@@ -1558,46 +1707,61 @@ function setupRegistrationForm() {
     payload.details.paymentReference = paymentReference;
     payload.paymentReference = paymentReference;
     payload.paymentStatus = PAYMENT_ENABLED ? "paid" : "disabled";
+    payload.onProgress = (progress) => {
+      setUploadProgress(progress);
+      setStatus(progress > 0 ? `Uploading files... ${progress}%` : "Preparing your registration PDF...", "");
+      if (progress > 0 && progress < 100) {
+        setButtonLoading(payButton, true, `Uploading ${progress}%`);
+      }
+    };
 
     try {
       const result = await submitRegistration(payload);
       console.log("[BOTD] Registration saved to Firestore and Storage", {
         registrationId: result.id,
+        folderName: result.folderName,
+        pdfUrl: result.pdfAsset?.url || "",
         uploadSummary: result.uploadedFiles,
       });
+      setUploadProgress(100);
       successMessage?.classList.remove("is-hidden");
-      setStatus(PAYMENT_ENABLED ? "Payment successful. Your registration has been submitted." : "Registration submitted successfully.", "is-success");
+      setStatus(
+        PAYMENT_ENABLED
+          ? "Payment successful. Your consent form and uploads were saved."
+          : "Consent form submitted. PDF and uploads saved successfully.",
+        "is-success"
+      );
       registrationForm.reset();
       syncGroupFields();
+      syncGuardianFields();
       updateUploadState(videoInput, videoName);
       updateUploadState(audioInput, audioName);
       updateUploadState(photoInput, photoName);
-      updateUploadState(documentInput, documentName);
+      if (termsToggle) {
+        termsToggle.setAttribute("aria-expanded", "false");
+      }
+      termsFull?.classList.add("is-hidden");
       registrationForm.querySelectorAll(".field").forEach((field) => field.classList.remove("is-filled", "is-success", "is-error"));
       syncSubmitState();
 
       await showPopup({
         title: "Registration Confirmed",
-        text: "Thank you for registering. Your audition entry has been recorded successfully.",
+        text: "Your BOTD consent form has been recorded successfully.",
         primaryText: "Continue",
       });
     } catch (error) {
       console.error("[BOTD] Registration submit failed", error);
-      setStatus("Registration upload failed. Please try again or contact BOTD support.", "is-error");
+      setUploadProgress(0);
+      setStatus(error?.message || "Registration upload failed. Please try again or contact BOTD support.", "is-error");
     }
   }
 
   function startPayment() {
     registrationForm.querySelectorAll(".field").forEach((field) => markFieldValidity(field, true));
 
-    if (!registrationForm.reportValidity()) {
-      setStatus("Please complete all required fields before continuing.", "is-error");
-      syncSubmitState();
-      return;
-    }
-
-    if (!agreement?.checked) {
-      setStatus("Please accept the Terms & Conditions before continuing.", "is-error");
+    const validation = validateForm();
+    if (!validation.valid) {
+      setStatus(validation.message, "is-error");
       syncSubmitState();
       return;
     }
@@ -1606,12 +1770,13 @@ function setupRegistrationForm() {
     setStatus(PAYMENT_ENABLED ? "Preparing your payment..." : "Submitting your registration...", "");
     setButtonLoading(payButton, true, PAYMENT_ENABLED ? "Processing" : "Submitting");
 
-    if (!PAYMENT_ENABLED) {
-      finalizeSubmission("payment-disabled")
-        .finally(() => {
-          setButtonLoading(payButton, false, "Submit Registration");
-          syncSubmitState();
-        });
+      if (!PAYMENT_ENABLED) {
+        finalizeSubmission("payment-disabled")
+          .finally(() => {
+            setUploadProgress(0);
+            setButtonLoading(payButton, false, "Submit Registration");
+            syncSubmitState();
+          });
       return;
     }
 
@@ -1672,6 +1837,10 @@ function setupRegistrationForm() {
 
   registrationForm.addEventListener("input", syncSubmitState);
   registrationForm.addEventListener("change", syncSubmitState);
+  ageInput?.addEventListener("input", () => {
+    syncGuardianFields();
+    syncSubmitState();
+  });
   categorySelect?.addEventListener("change", () => {
     syncGroupFields();
     syncSubmitState();
@@ -1679,7 +1848,11 @@ function setupRegistrationForm() {
   videoInput?.addEventListener("change", () => updateUploadState(videoInput, videoName));
   audioInput?.addEventListener("change", () => updateUploadState(audioInput, audioName));
   photoInput?.addEventListener("change", () => updateUploadState(photoInput, photoName));
-  documentInput?.addEventListener("change", () => updateUploadState(documentInput, documentName));
+  termsToggle?.addEventListener("click", () => {
+    const nextExpanded = termsToggle.getAttribute("aria-expanded") !== "true";
+    termsToggle.setAttribute("aria-expanded", String(nextExpanded));
+    termsFull?.classList.toggle("is-hidden", !nextExpanded);
+  });
   payButton?.addEventListener("click", startPayment);
 
   if (!PAYMENT_ENABLED) {
@@ -1690,10 +1863,10 @@ function setupRegistrationForm() {
   }
 
   syncGroupFields();
+  syncGuardianFields();
   updateUploadState(videoInput, videoName);
   updateUploadState(audioInput, audioName);
   updateUploadState(photoInput, photoName);
-  updateUploadState(documentInput, documentName);
   syncSubmitState();
 }
 
@@ -2246,6 +2419,8 @@ function setupContactForm() {
 function initSite() {
   createLoadingScreen();
   createPopup();
+  prepareMediaLoading();
+  window.setTimeout(hideLoadingScreen, LOADING_TIMEOUT_MS);
   initializeAdminConsole();
   activeUser = getCurrentUser();
   loadAuthSession();
