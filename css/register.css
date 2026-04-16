@@ -7,14 +7,14 @@
   background:
     linear-gradient(90deg, rgba(5, 5, 5, 0.95) 0%, rgba(5, 5, 5, 0.74) 48%, rgba(5, 5, 5, 0.5) 100%),
     radial-gradient(circle at top right, rgba(246, 182, 60, 0.18), transparent 32%),
-    url("../assets/images/poster3.jpg") center top / cover no-repeat;
+    url("../assets/images/posters/poster3.webp") center top / cover no-repeat;
 }
 
 body[data-theme="light"] .register-hero-backdrop {
   background:
     linear-gradient(90deg, rgba(242, 237, 227, 0.95) 0%, rgba(242, 237, 227, 0.76) 48%, rgba(242, 237, 227, 0.5) 100%),
     radial-gradient(circle at top right, rgba(216, 139, 18, 0.18), transparent 32%),
-    url("../assets/images/poster3.jpg") center top / cover no-repeat;
+    url("../assets/images/posters/poster3.webp") center top / cover no-repeat;
 }
 
 .register-hero-content,
@@ -29,6 +29,12 @@ body[data-theme="light"] .register-hero-backdrop {
 
 .register-hero-content {
   align-items: center;
+}
+
+.register-side {
+  position: sticky;
+  top: calc(var(--nav-height, 88px) + 26px);
+  align-self: start;
 }
 
 .register-hero-highlight,
@@ -176,6 +182,63 @@ body[data-theme="light"] .registration-card {
   background:
     linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(251, 244, 234, 0.98)),
     radial-gradient(circle at top right, rgba(216, 139, 18, 0.09), transparent 28%);
+}
+
+.registration-card-disabled {
+  border-color: rgba(188, 188, 188, 0.18);
+  background:
+    linear-gradient(180deg, rgba(28, 28, 28, 0.96), rgba(34, 34, 34, 0.98)),
+    radial-gradient(circle at top right, rgba(190, 190, 190, 0.08), transparent 32%);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px rgba(200, 200, 200, 0.06),
+    0 0 30px rgba(0, 0, 0, 0.2);
+}
+
+body[data-theme="light"] .registration-card-disabled {
+  background:
+    linear-gradient(180deg, rgba(240, 240, 240, 0.98), rgba(229, 229, 229, 0.98)),
+    radial-gradient(circle at top right, rgba(176, 176, 176, 0.12), transparent 32%);
+}
+
+.registration-disabled-banner {
+  margin-bottom: 28px;
+  padding: 22px 22px 20px;
+  border: 1px solid rgba(186, 186, 186, 0.22);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(44, 44, 44, 0.84), rgba(52, 52, 52, 0.92));
+}
+
+.registration-disabled-banner h3 {
+  margin: 0 0 10px;
+  color: var(--ivory);
+}
+
+.registration-disabled-banner p:last-child {
+  margin-bottom: 0;
+  color: var(--text-soft);
+}
+
+.registration-form.is-disabled {
+  opacity: 0.58;
+}
+
+.registration-form.is-disabled .field,
+.registration-form.is-disabled .upload-field,
+.registration-form.is-disabled .consent-check,
+.registration-form.is-disabled .payment-panel,
+.registration-form.is-disabled .terms-embed-copy {
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.registration-form.is-disabled input,
+.registration-form.is-disabled select,
+.registration-form.is-disabled textarea,
+.registration-form.is-disabled button {
+  cursor: not-allowed;
+    filter: grayscale(1);
+
 }
 
 .trust-points {
@@ -453,9 +516,49 @@ body[data-theme="light"] .field select {
     linear-gradient(180deg, rgba(255, 183, 60, 0.06), rgba(255, 255, 255, 0.02));
 }
 
+.terms-collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 197, 66, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.terms-collapse-icon {
+  width: 14px;
+  height: 14px;
+  border-right: 2px solid var(--gold-soft);
+  border-bottom: 2px solid var(--gold-soft);
+  transform: rotate(45deg);
+  transition: transform 220ms ease;
+  flex-shrink: 0;
+}
+
+.terms-collapse-toggle[aria-expanded="true"] .terms-collapse-icon {
+  transform: rotate(225deg);
+}
+
 .terms-embed-copy {
   display: grid;
   gap: 10px;
+  overflow: hidden;
+  max-height: 1200px;
+  opacity: 1;
+  transition: max-height 260ms ease, opacity 220ms ease;
+}
+
+.terms-embed-copy.is-collapsed {
+  max-height: 0;
+  opacity: 0;
 }
 
 .terms-embed-copy h3 {
@@ -507,11 +610,26 @@ body[data-theme="light"] .field select {
   border: 1px solid rgba(255, 197, 66, 0.16);
   background: rgba(255, 255, 255, 0.03);
   line-height: 1.7;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 .consent-check input {
   margin-top: 4px;
   accent-color: var(--gold);
+}
+
+.consent-check.is-error {
+  border-color: rgba(255, 109, 109, 0.66);
+  box-shadow:
+    0 0 0 4px rgba(255, 109, 109, 0.08),
+    0 14px 28px rgba(110, 17, 17, 0.14);
+}
+
+.consent-check.is-success {
+  border-color: rgba(127, 212, 139, 0.52);
+  box-shadow:
+    0 0 0 4px rgba(127, 212, 139, 0.08),
+    0 14px 28px rgba(20, 86, 36, 0.12);
 }
 
 .terms-inline-toggle {
@@ -629,6 +747,7 @@ body[data-theme="light"] .field select {
     0 18px 36px rgba(255, 174, 54, 0.08);
   position: relative;
   overflow: hidden;
+  scroll-margin-top: 110px;
 }
 
 .payment-panel::after {
@@ -726,6 +845,11 @@ body[data-theme="light"] .field select {
     grid-template-columns: 1fr;
   }
 
+  .register-side {
+    position: static;
+    top: auto;
+  }
+
   .instruction-grid {
     grid-template-columns: 1fr;
   }
@@ -740,6 +864,10 @@ body[data-theme="light"] .field select {
 
   .payment-panel {
     display: grid;
+    position: sticky;
+    bottom: 14px;
+    z-index: 18;
+    backdrop-filter: blur(18px);
   }
 
   .register-note-card,
@@ -779,6 +907,12 @@ body[data-theme="light"] .field select {
     gap: 24px;
   }
 
+  .payment-panel {
+    padding: 20px 18px;
+    border-radius: 22px;
+    bottom: 10px;
+  }
+
   .terms-modal {
     padding: 16px;
   }
@@ -786,4 +920,21 @@ body[data-theme="light"] .field select {
   .terms-modal-panel {
     padding: 22px;
   }
+}
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("registration-form");
+
+  if (form?.dataset.registrationClosed === "true") {
+    form.querySelectorAll("input, select, textarea, button").forEach(el => {
+      el.disabled = true;
+    });
+  }
+});
+.registration-form.is-disabled input,
+.registration-form.is-disabled select,
+.registration-form.is-disabled textarea {
+  pointer-events: none;
 }

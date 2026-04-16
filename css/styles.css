@@ -125,6 +125,18 @@ body {
     background var(--transition);
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 img {
   display: block;
   max-width: 100%;
@@ -398,7 +410,7 @@ body[data-theme="light"] .theme-toggle-thumb {
 .hero-backdrop {
   background:
     var(--hero-overlay),
-    url("assets/images/poster3.jpg") center top / cover no-repeat;
+    url("../assets/images/posters/poster3.webp") center top / cover no-repeat;
   opacity: 0.98;
   transform: translateY(var(--hero-shift, 0px)) scale(1.06);
   transition: transform 180ms linear;
@@ -437,9 +449,18 @@ body[data-theme="light"] .theme-toggle-thumb {
 /* 🔥 Home hero image like about page */
 .home-hero-backdrop {
   background:
-    linear-gradient(90deg, rgba(5,5,5,0.95) 0%, rgba(5,5,5,0.75) 50%, rgba(5,5,5,0.5) 100%),
-    radial-gradient(circle at top right, rgba(246, 182, 60, 0.18), transparent 30%),
-    url("../assets/images/poster3.jpg") center center / cover no-repeat;
+    linear-gradient(
+      90deg,
+      rgba(5, 5, 5, 0.95) 0%,
+      rgba(5, 5, 5, 0.75) 50%,
+      rgba(5, 5, 5, 0.5) 100%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(246, 182, 60, 0.18),
+      transparent 30%
+    ),
+    url("../assets/images/posters/poster3.webp") center center / cover no-repeat;
 }
 
 .hero-beam {
@@ -759,7 +780,7 @@ body[data-theme="light"] .theme-toggle-thumb {
       rgba(246, 182, 60, 0.18),
       transparent 32%
     ),
-    url("../assets/images/poster3.jpg") center center / cover no-repeat;
+    url("../assets/images/posters/poster3.webp") center center / cover no-repeat;
 }
 
 body[data-theme="light"] .about-hero-backdrop {
@@ -775,7 +796,7 @@ body[data-theme="light"] .about-hero-backdrop {
       rgba(216, 139, 18, 0.18),
       transparent 32%
     ),
-    url("../assets/images/poster3.jpg") center center / cover no-repeat;
+    url("../assets/images/posters/poster3.webp") center center / cover no-repeat;
 }
 
 .about-hero-content,
@@ -929,7 +950,6 @@ body[data-theme="light"] .about-hero-backdrop {
 }
 
 .founder-image-wrap {
-  
   aspect-ratio: 16 / 11;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.03);
@@ -991,7 +1011,7 @@ body[data-theme="light"] .about-hero-backdrop {
       rgba(246, 182, 60, 0.18),
       transparent 32%
     ),
-    url("../assets/images/poster2.jpg") center center / cover no-repeat;
+    url("../assets/images/posters/poster2.webp") center center / cover no-repeat;
 }
 
 body[data-theme="light"] .seasons-hero-backdrop {
@@ -1007,7 +1027,7 @@ body[data-theme="light"] .seasons-hero-backdrop {
       rgba(216, 139, 18, 0.18),
       transparent 32%
     ),
-    url("../assets/images/poster2.jpg") center center / cover no-repeat;
+    url("../assets/images/posters/poster2.webp") center center / cover no-repeat;
 }
 
 .seasons-hero-content {
@@ -1023,6 +1043,13 @@ body[data-theme="light"] .seasons-hero-backdrop {
   margin-top: 28px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.season-hero-insights {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1674,6 +1701,24 @@ body[data-theme="light"] .section-alt::before {
   min-height: 280px;
 }
 
+.category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 20px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 198, 73, 0.22), rgba(255, 159, 15, 0.12)),
+    rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 206, 101, 0.24);
+  color: var(--gold-soft);
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
 .category-age {
   margin-bottom: 18px;
   color: var(--gold-soft);
@@ -2212,6 +2257,89 @@ body[data-theme="light"] .field textarea {
   background: linear-gradient(90deg, var(--gold), transparent);
 }
 
+.season-overview-note {
+  margin: 0 0 20px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 196, 94, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 198, 94, 0.08),
+    rgba(255, 198, 94, 0.03)
+  );
+  color: var(--text-soft);
+}
+
+.fee-card-private,
+#season-fee-solo-list,
+#season-fee-group-list {
+  display: none;
+}
+
+.policy-page .hero {
+  min-height: auto;
+  padding: 140px 0 72px;
+}
+
+.policy-layout {
+  display: grid;
+  gap: 28px;
+}
+
+.policy-card,
+.policy-contact-card {
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: linear-gradient(180deg, var(--surface), var(--surface-strong));
+  box-shadow: var(--shadow);
+}
+
+.policy-card h2,
+.policy-contact-card h2 {
+  margin-bottom: 16px;
+}
+
+.policy-card p,
+.policy-contact-card p {
+  color: var(--text-soft);
+}
+
+.policy-list {
+  margin: 18px 0 0;
+  padding-left: 18px;
+  color: var(--text-soft);
+}
+
+.policy-list li + li {
+  margin-top: 10px;
+}
+
+.policy-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.policy-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .policy-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .policy-card,
+  .policy-contact-card {
+    padding: 22px;
+    border-radius: 24px;
+  }
+}
+
 .loading-screen {
   position: fixed;
   inset: 0;
@@ -2567,6 +2695,10 @@ body[data-theme="light"] .loading-screen {
     grid-template-columns: 1fr;
   }
 
+  .season-hero-insights {
+    grid-template-columns: 1fr;
+  }
+
   .poster-stack {
     min-height: 520px;
   }
@@ -2649,6 +2781,7 @@ body[data-theme="light"] .loading-screen {
   }
 
   .hero-highlights,
+  .season-hero-insights,
   .steps {
     grid-template-columns: 1fr;
   }
@@ -2822,5 +2955,4 @@ body[data-theme="light"] .loading-screen {
   .powered-logo {
     width: 96px;
   }
-
 }

@@ -7,14 +7,14 @@
   background:
     linear-gradient(90deg, rgba(5, 5, 5, 0.95) 0%, rgba(5, 5, 5, 0.74) 48%, rgba(5, 5, 5, 0.48) 100%),
     radial-gradient(circle at top right, rgba(246, 182, 60, 0.18), transparent 32%),
-    url("../assets/images/poster1.jpg") center center / cover no-repeat;
+    url("../assets/images/posters/poster1.webp") center center / cover no-repeat;
 }
 
 body[data-theme="light"] .contact-hero-backdrop {
   background:
     linear-gradient(90deg, rgba(242, 237, 227, 0.95) 0%, rgba(242, 237, 227, 0.76) 48%, rgba(242, 237, 227, 0.48) 100%),
     radial-gradient(circle at top right, rgba(216, 139, 18, 0.18), transparent 32%),
-    url("../assets/images/poster1.jpg") center center / cover no-repeat;
+    url("../assets/images/posters/poster1.webp") center center / cover no-repeat;
 }
 
 .contact-hero-content,
