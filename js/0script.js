@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import {
@@ -27,6 +28,12 @@ import { db } from "../services/firebase.js";
 import { submitContactMessage, submitRegistration, submitSponsorEnquiry } from "../services/formService.js";
 import { subscribeHomeContent } from "../services/homeService.js";
 import {
+  createRazorpayOrder,
+  loadRazorpayConfig,
+  PAYMENT_CONFIG,
+  verifyRazorpayPayment,
+} from "../services/paymentService.js";
+import {
   setLeaderboardVisibility,
   setVoteVisibility,
   subscribeEventSignals,
@@ -42,8 +49,9 @@ const LOGO_PATH = "assets/images/logo/Final_BOTD_Logo.png";
 const CONTENT_COLLECTION = "adminContent";
 const JUDGES_COLLECTION = "judges";
 const SPONSORS_COLLECTION = "sponsors";
-const CACHE_TTL_MS = 1000 * 60 * 30;
+const CACHE_TTL_MS = 1000 * 60 * 10;
 const LOADING_TIMEOUT_MS = 2400;
+const ACTION_LIMITS_KEY = "botd-action-limits";
 
 const CONTENT_DOCS = {
   season: "seasonPage",
@@ -57,7 +65,7 @@ const JUDGE_MAPPINGS = [
   { docId: "judge-c", prefix: "judge3" },
 ];
 const SPONSOR_TIER_CONFIG = [
-  { key: "presented-by", title: "Title Sponsor", sectionClass: "sponsor-band-presented", gridClass: "sponsor-grid-feature", cardClass: "sponsor-logo-card-feature" },
+  { key: "presented-by", title: "Presented By", sectionClass: "sponsor-band-presented", gridClass: "sponsor-grid-feature", cardClass: "sponsor-logo-card-feature" },
   { key: "powered-by", title: "Powered By", sectionClass: "sponsor-band-power", gridClass: "sponsor-grid-power", cardClass: "sponsor-logo-card-power" },
   { key: "co-powered-by", title: "Co Powered By", sectionClass: "sponsor-band-power", gridClass: "sponsor-grid-power", cardClass: "sponsor-logo-card-power" },
   { key: "associate-sponsors", title: "Associate Sponsors", sectionClass: "sponsor-band-associate", gridClass: "sponsor-grid-associate", cardClass: "sponsor-logo-card-associate" },
@@ -381,6 +389,64 @@ function getPersistentDeviceId() {
   return nextId;
 }
 
+function sanitizeTextValue(value, maxLength = 160) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/[<>]/g, "")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function sanitizeEmailValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[<>\s]/g, "")
+    .slice(0, 160);
+}
+
+function sanitizeMessageValue(value, maxLength = 1200) {
+  return String(value || "")
+    .replace(/[<>]/g, "")
+    .replace(/\r/g, "")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function readActionLimitStore() {
+  try {
+    return JSON.parse(localStorage.getItem(ACTION_LIMITS_KEY) || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function writeActionLimitStore(store) {
+  localStorage.setItem(ACTION_LIMITS_KEY, JSON.stringify(store));
+}
+
+function consumeRateLimit(key, ttlMs) {
+  const now = Date.now();
+  const store = readActionLimitStore();
+  const currentValue = Number(store[key] || 0);
+
+  if (currentValue && (now - currentValue) < ttlMs) {
+    return {
+      allowed: false,
+      retryAfterMs: ttlMs - (now - currentValue),
+    };
+  }
+
+  store[key] = now;
+  Object.keys(store).forEach((entryKey) => {
+    if ((now - Number(store[entryKey] || 0)) > 1000 * 60 * 60) {
+      delete store[entryKey];
+    }
+  });
+  writeActionLimitStore(store);
+  return { allowed: true, retryAfterMs: 0 };
+}
+
 function setVotingAvailability(isOpen, closedMessage) {
   liveVotingOpen = isOpen;
   liveVotingClosedMessage = closedMessage || "";
@@ -671,10 +737,9 @@ function initializeAdminConsole() {
 function subscribeToDocument(collectionName, documentId, onData) {
   try {
     const cached = readCachedPayload(collectionName, documentId);
-if (cached) {
-  console.log("⚡ Loaded from cache:", collectionName, documentId);
-  onData(cached);
-}
+    if (cached) {
+      onData(cached);
+    }
 
     getDoc(doc(db, collectionName, documentId))
       .then((snapshot) => {
@@ -688,6 +753,25 @@ if (cached) {
       .catch((error) => {
         console.error(`Failed to prime ${collectionName}/${documentId}`, error);
       });
+
+    const unsubscribe = onSnapshot(
+      doc(db, collectionName, documentId),
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          console.warn(`[BOTD] Missing document: ${collectionName}/${documentId}`);
+          return;
+        }
+
+        console.log(`[BOTD] Realtime update: ${collectionName}/${documentId}`);
+        writeCachedPayload(collectionName, documentId, snapshot.data());
+        onData(snapshot.data());
+      },
+      (error) => {
+        console.error(`Failed to read ${collectionName}/${documentId}`, error);
+      }
+    );
+
+    pageSubscriptions.push(unsubscribe);
   } catch (error) {
     console.error(`Failed to subscribe to ${collectionName}/${documentId}`, error);
   }
@@ -741,10 +825,9 @@ function writeCachedPayload(scope, key, data) {
 function subscribeToCollection(collectionName, onData) {
   try {
     const cached = readCachedPayload("collection", collectionName);
-if (cached) {
-  console.log("⚡ Loaded from cache:", collectionName);
-  onData(cached);
-}
+    if (cached) {
+      onData(cached);
+    }
 
     getDocs(collection(db, collectionName))
       .then((snapshot) => {
@@ -756,6 +839,20 @@ if (cached) {
         console.error(`Failed to prime collection ${collectionName}`, error);
       });
 
+    const unsubscribe = onSnapshot(
+      query(collection(db, collectionName)),
+      (snapshot) => {
+        const items = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+        console.log(`[BOTD] Realtime update: ${collectionName}`, items.length);
+        writeCachedPayload("collection", collectionName, items);
+        onData(items);
+      },
+      (error) => {
+        console.error(`Failed to read collection ${collectionName}`, error);
+      }
+    );
+
+    registerSubscription(unsubscribe);
   } catch (error) {
     console.error(`Failed to subscribe to collection ${collectionName}`, error);
   }
@@ -1014,6 +1111,40 @@ function loadTeamsRealtime() {
       (error) => console.error("[BOTD] Failed to load teams", error)
     )
   );
+}
+
+function createLoadingScreen() {
+  if (document.querySelector(".loading-screen")) {
+    loadingScreen = document.querySelector(".loading-screen");
+    return;
+  }
+
+  const screen = document.createElement("div");
+  screen.className = "loading-screen";
+  screen.setAttribute("aria-hidden", "true");
+  screen.innerHTML = `
+    <div class="loading-screen-panel">
+      <div class="loading-screen-logo-wrap">
+        <img src="${LOGO_PATH}" alt="BOTD logo">
+      </div>
+      <p>Loading...</p>
+    </div>
+  `;
+
+  body.append(screen);
+  loadingScreen = screen;
+}
+
+function hideLoadingScreen() {
+  if (!loadingScreen || loadingScreen.dataset.hidden === "true") {
+    return;
+  }
+
+  loadingScreen.dataset.hidden = "true";
+  window.setTimeout(() => {
+    loadingScreen.classList.add("is-hidden");
+    window.setTimeout(() => loadingScreen?.remove(), 500);
+  }, 260);
 }
 
 function prepareMediaLoading() {
@@ -1414,7 +1545,8 @@ function setupRegistrationForm() {
     return;
   }
 
-  const PAYMENT_ENABLED = false;
+  const PAYMENT_ENABLED = Boolean(PAYMENT_CONFIG.enabled);
+  const REGISTRATION_CLOSED = registrationForm.dataset.registrationClosed === "true";
   const categorySelect = registrationForm.querySelector("#category-select");
   const ageInput = registrationForm.querySelector('input[name="age"]');
   const groupFields = registrationForm.querySelector("#group-fields");
@@ -1426,8 +1558,10 @@ function setupRegistrationForm() {
   const parentEmailInput = registrationForm.querySelector('input[name="parentEmail"]');
   const relationshipInput = registrationForm.querySelector('input[name="relationship"]');
   const guardianConsentInput = registrationForm.querySelector("#guardian-consent");
+  const guardianConsentWrap = registrationForm.querySelector("#guardian-consent-wrap");
   const guardianSignatureInput = registrationForm.querySelector('input[name="guardianSignature"]');
   const participantConsentInput = registrationForm.querySelector("#participant-consent");
+  const participantConsentWrap = registrationForm.querySelector("#participant-consent-wrap");
   const videoInput = registrationForm.querySelector("#video-file");
   const audioInput = registrationForm.querySelector("#audio-file");
   const photoInput = registrationForm.querySelector("#photo-files");
@@ -1439,9 +1573,9 @@ function setupRegistrationForm() {
   const successMessage = registrationForm.querySelector("#success-message");
   const uploadProgress = registrationForm.querySelector("#upload-progress");
   const uploadProgressBar = registrationForm.querySelector("#upload-progress-bar");
-  const termsToggle = registrationForm.querySelector("#terms-inline-toggle");
-  const termsFull = registrationForm.querySelector("#terms-inline-full");
-  const razorpayKey = "rzp_test_Sak3fjFZSi65XA";
+  const honeypotInput = registrationForm.querySelector('input[name="website"]');
+  const termsCollapseToggle = registrationForm.querySelector("#terms-collapse-toggle");
+  const termsEmbedCopy = registrationForm.querySelector("#terms-embed-copy");
 
   function setStatus(message, tone) {
     if (!statusMessage) {
@@ -1456,7 +1590,19 @@ function setupRegistrationForm() {
     }
   }
 
-  function updateUploadState(input, label) {
+  if (REGISTRATION_CLOSED) {
+    registrationForm
+      .querySelectorAll("input, select, textarea, button")
+      .forEach((control) => {
+        control.disabled = true;
+      });
+
+    setStatus("Registration is currently disabled. Auditions open on 17th April.", "");
+    successMessage?.classList.add("is-hidden");
+    return;
+  }
+
+  function updateUploadState(input, label, forceValidate = false) {
     if (!input || !label) {
       return;
     }
@@ -1468,7 +1614,46 @@ function setupRegistrationForm() {
       ? (fileCount === 1 ? input.files[0].name : `${fileCount} files selected`)
       : "No file selected";
     wrapper?.classList.toggle("is-success", hasFile);
-    wrapper?.classList.remove("is-error");
+
+    if (forceValidate || input.required) {
+      wrapper?.classList.toggle("is-error", !hasFile);
+    } else {
+      wrapper?.classList.remove("is-error");
+    }
+  }
+
+  function syncConsentState() {
+    participantConsentWrap?.classList.toggle("is-error", !participantConsentInput?.checked);
+    participantConsentWrap?.classList.toggle("is-success", Boolean(participantConsentInput?.checked));
+
+    const isMinor = checkMinor();
+    guardianConsentWrap?.classList.toggle("is-error", isMinor && !guardianConsentInput?.checked);
+    guardianConsentWrap?.classList.toggle("is-success", !isMinor || Boolean(guardianConsentInput?.checked));
+  }
+
+  function validateRequiredUploads(forceValidate = false) {
+    const uploadEntries = [
+      [videoInput, videoName],
+      [audioInput, audioName],
+      [photoInput, photoName],
+    ];
+
+    uploadEntries.forEach(([input, label]) => updateUploadState(input, label, forceValidate));
+
+    return uploadEntries.every(([input]) => !input?.required || Boolean(input.files?.length));
+  }
+
+  function syncTermsCollapse(forceExpanded) {
+    if (!termsCollapseToggle || !termsEmbedCopy) {
+      return;
+    }
+
+    const shouldExpand = typeof forceExpanded === "boolean"
+      ? forceExpanded
+      : termsCollapseToggle.getAttribute("aria-expanded") !== "true";
+
+    termsCollapseToggle.setAttribute("aria-expanded", String(shouldExpand));
+    termsEmbedCopy.classList.toggle("is-collapsed", !shouldExpand);
   }
 
   function checkMinor() {
@@ -1532,27 +1717,37 @@ function setupRegistrationForm() {
     });
 
     if (guardianConsentInput) {
+      guardianConsentInput.required = isMinor;
       if (!isMinor) {
         guardianConsentInput.checked = false;
       }
     }
+
+    syncConsentState();
   }
 
   function validateForm() {
-    if (!registrationForm.reportValidity()) {
+    const uploadsValid = validateRequiredUploads(true);
+    syncConsentState();
+
+    if (!registrationForm.reportValidity() || !uploadsValid) {
       return { valid: false, message: "Please complete all required fields before continuing." };
     }
 
     if (!participantConsentInput?.checked) {
+      syncTermsCollapse(true);
+      participantConsentInput?.focus();
       return { valid: false, message: "Please accept the BOTD legal consent clauses before continuing." };
     }
 
     if (checkMinor()) {
       if (!guardianConsentInput?.checked) {
+        guardianConsentInput?.focus();
         return { valid: false, message: "Parent or legal guardian consent is required for minors." };
       }
 
       if (!guardianSignatureInput?.value.trim()) {
+        guardianSignatureInput?.focus();
         return { valid: false, message: "Parent or legal guardian digital signature is required for minors." };
       }
     }
@@ -1562,6 +1757,10 @@ function setupRegistrationForm() {
 
   function isFormReady() {
     if (!registrationForm.checkValidity()) {
+      return false;
+    }
+
+    if (!validateRequiredUploads()) {
       return false;
     }
 
@@ -1585,30 +1784,33 @@ function setupRegistrationForm() {
   function collectFormData() {
     const termsCopyRoot = registrationForm.querySelector(".terms-embed-copy");
     const termsText = termsCopyRoot
-      ? Array.from(termsCopyRoot.querySelectorAll("p")).map((item) => item.textContent.trim()).join(" ")
+      ? Array.from(termsCopyRoot.querySelectorAll("p"))
+        .map((item) => item.textContent.trim())
+        .filter(Boolean)
+        .join(" ")
       : "";
     const isMinor = checkMinor();
 
     return {
-      name: registrationForm.fullName.value.trim(),
+      name: sanitizeTextValue(registrationForm.fullName.value, 120),
       phone: registrationForm.phone.value.trim(),
-      email: registrationForm.email.value.trim(),
+      email: sanitizeEmailValue(registrationForm.email.value),
       isMinor,
-      teamName: registrationForm.teamName.value.trim() || registrationForm.fullName.value.trim(),
-      danceStyle: registrationForm.danceStyle.value,
-      city: registrationForm.city.value.trim(),
+      teamName: sanitizeTextValue(registrationForm.teamName.value, 120) || sanitizeTextValue(registrationForm.fullName.value, 120),
+      danceStyle: sanitizeTextValue(registrationForm.danceStyle.value, 80),
+      city: sanitizeTextValue(registrationForm.city.value, 80),
       age: registrationForm.age.value.trim(),
-      category: registrationForm.category.value,
+      category: sanitizeTextValue(registrationForm.category.value, 80),
       memberCount: registrationForm.memberCount.value.trim(),
-      discoverySource: registrationForm.discoverySource.value,
-      digitalSignature: registrationForm.digitalSignature.value.trim(),
+      discoverySource: sanitizeTextValue(registrationForm.discoverySource.value, 120),
+      digitalSignature: sanitizeTextValue(registrationForm.digitalSignature.value, 120),
       signatureType: "typed",
       signedAt: new Date().toISOString(),
-      parentName: isMinor ? parentNameInput?.value.trim() || "" : "",
+      parentName: isMinor ? sanitizeTextValue(parentNameInput?.value, 120) || "" : "",
       parentPhone: isMinor ? parentPhoneInput?.value.trim() || "" : "",
-      parentEmail: isMinor ? parentEmailInput?.value.trim() || "" : "",
-      relationship: isMinor ? relationshipInput?.value.trim() || "" : "",
-      guardianSignature: isMinor ? guardianSignatureInput?.value.trim() || "" : "",
+      parentEmail: isMinor ? sanitizeEmailValue(parentEmailInput?.value) || "" : "",
+      relationship: isMinor ? sanitizeTextValue(relationshipInput?.value, 80) || "" : "",
+      guardianSignature: isMinor ? sanitizeTextValue(guardianSignatureInput?.value, 120) || "" : "",
       paymentEnabled: PAYMENT_ENABLED,
       paymentStatus: PAYMENT_ENABLED ? "paid" : "disabled",
       paymentReference: "",
@@ -1666,16 +1868,14 @@ function setupRegistrationForm() {
         "is-success"
       );
       registrationForm.reset();
+      setUploadProgress(0);
       syncGroupFields();
       syncGuardianFields();
       updateUploadState(videoInput, videoName);
       updateUploadState(audioInput, audioName);
       updateUploadState(photoInput, photoName);
-      if (termsToggle) {
-        termsToggle.setAttribute("aria-expanded", "false");
-      }
-      termsFull?.classList.add("is-hidden");
       registrationForm.querySelectorAll(".field").forEach((field) => field.classList.remove("is-filled", "is-success", "is-error"));
+      syncTermsCollapse(false);
       syncSubmitState();
 
       await showPopup({
@@ -1700,35 +1900,72 @@ function setupRegistrationForm() {
       return;
     }
 
+    if (honeypotInput?.value.trim()) {
+      setStatus("Unable to submit right now.", "is-error");
+      syncSubmitState();
+      return;
+    }
+
+    const rateLimitState = consumeRateLimit("registration-form", 60000);
+    if (!rateLimitState.allowed) {
+      setStatus("Please wait a few seconds before submitting again.", "is-error");
+      syncSubmitState();
+      return;
+    }
+
     successMessage?.classList.add("is-hidden");
     setStatus(PAYMENT_ENABLED ? "Preparing your payment..." : "Submitting your registration...", "");
     setButtonLoading(payButton, true, PAYMENT_ENABLED ? "Processing" : "Submitting");
 
-      if (!PAYMENT_ENABLED) {
-        finalizeSubmission("payment-disabled")
-          .finally(() => {
-            setUploadProgress(0);
-            setButtonLoading(payButton, false, "Proceed to Payment");
-            syncSubmitState();
-          });
+    if (!PAYMENT_ENABLED) {
+      finalizeSubmission("payment-disabled")
+        .finally(() => {
+          setButtonLoading(payButton, false, "Register & Continue");
+          syncSubmitState();
+        });
+      return;
+    }
+
+    const registrationPayload = collectFormData();
+
+    let paymentConfig;
+    let orderContext;
+
+    try {
+      paymentConfig = await loadRazorpayConfig();
+      orderContext = await createRazorpayOrder(registrationPayload);
+    } catch (error) {
+      console.error("[BOTD] Payment bootstrap failed", error);
+      setStatus(error?.message || "Unable to start payment. Please try again.", "is-error");
+      setButtonLoading(payButton, false, "Register & Continue");
+      syncSubmitState();
       return;
     }
 
     const paymentOptions = {
-      key: razorpayKey,
-      amount: 9900,
-      currency: "INR",
+      key: paymentConfig.keyId,
+      amount: orderContext.amountPaise,
+      currency: orderContext.currency,
+      order_id: orderContext.orderId,
       name: "Battle Of The Dance",
       description: "First Audition Round Registration",
       async handler(response) {
-        await finalizeSubmission(response.razorpay_payment_id || "demo-success");
-        setButtonLoading(payButton, false, "Pay & Submit");
-        syncSubmitState();
+        try {
+          setStatus("Validating payment...", "");
+          const verification = await verifyRazorpayPayment(response, orderContext, registrationPayload);
+          await finalizeSubmission(verification.paymentId || response.razorpay_payment_id || "verified-payment");
+        } catch (error) {
+          console.error("[BOTD] Payment verification failed", error);
+          setStatus(error?.message || "Payment verification failed. Please contact BOTD support.", "is-error");
+        } finally {
+          setButtonLoading(payButton, false, "Register & Continue");
+          syncSubmitState();
+        }
       },
       prefill: {
-        name: registrationForm.fullName.value.trim(),
-        email: registrationForm.email.value.trim(),
-        contact: registrationForm.phone.value.trim(),
+        name: registrationPayload.name,
+        email: registrationPayload.email,
+        contact: registrationPayload.phone,
       },
       theme: {
         color: "#f6b63c",
@@ -1736,26 +1973,25 @@ function setupRegistrationForm() {
       modal: {
         ondismiss() {
           setStatus("Payment was cancelled. Your form details are still on the page.", "is-error");
-          setButtonLoading(payButton, false, "Pay & Submit");
+          setButtonLoading(payButton, false, "Register & Continue");
           syncSubmitState();
         },
       },
     };
 
-    const hasValidTestKey = typeof razorpayKey === "string"
-      && razorpayKey.startsWith("rzp_test_")
-      && !razorpayKey.includes("YOUR_KEY_HERE");
+    const hasValidRazorpayKey = typeof paymentConfig?.keyId === "string"
+      && /^(rzp_test_|rzp_live_)/.test(paymentConfig.keyId);
 
     if (typeof window.Razorpay !== "function") {
       setStatus("Razorpay SDK failed to load. Please refresh and try again.", "is-error");
-      setButtonLoading(payButton, false, "Pay & Submit");
+      setButtonLoading(payButton, false, "Register & Continue");
       syncSubmitState();
       return;
     }
 
-    if (!hasValidTestKey) {
-      setStatus("Add your Razorpay test key in js/script.js to open the checkout popup.", "is-error");
-      setButtonLoading(payButton, false, "Pay & Submit");
+    if (!hasValidRazorpayKey) {
+      setStatus("Razorpay key ID is missing from the backend config.", "is-error");
+      setButtonLoading(payButton, false, "Register & Continue");
       syncSubmitState();
       return;
     }
@@ -1763,14 +1999,17 @@ function setupRegistrationForm() {
     const razorpay = new window.Razorpay(paymentOptions);
     razorpay.on("payment.failed", () => {
       setStatus("Payment failed. Please try again.", "is-error");
-      setButtonLoading(payButton, false, "Pay & Submit");
+      setButtonLoading(payButton, false, "Register & Continue");
       syncSubmitState();
     });
     razorpay.open();
   }
 
   registrationForm.addEventListener("input", syncSubmitState);
-  registrationForm.addEventListener("change", syncSubmitState);
+  registrationForm.addEventListener("change", () => {
+    syncConsentState();
+    syncSubmitState();
+  });
   ageInput?.addEventListener("input", () => {
     syncGuardianFields();
     syncSubmitState();
@@ -1779,28 +2018,28 @@ function setupRegistrationForm() {
     syncGroupFields();
     syncSubmitState();
   });
-  videoInput?.addEventListener("change", () => updateUploadState(videoInput, videoName));
-  audioInput?.addEventListener("change", () => updateUploadState(audioInput, audioName));
-  photoInput?.addEventListener("change", () => updateUploadState(photoInput, photoName));
-  termsToggle?.addEventListener("click", () => {
-    const nextExpanded = termsToggle.getAttribute("aria-expanded") !== "true";
-    termsToggle.setAttribute("aria-expanded", String(nextExpanded));
-    termsFull?.classList.toggle("is-hidden", !nextExpanded);
+  videoInput?.addEventListener("change", () => updateUploadState(videoInput, videoName, true));
+  audioInput?.addEventListener("change", () => updateUploadState(audioInput, audioName, true));
+  photoInput?.addEventListener("change", () => updateUploadState(photoInput, photoName, true));
+  participantConsentInput?.addEventListener("change", syncConsentState);
+  guardianConsentInput?.addEventListener("change", syncConsentState);
+  termsCollapseToggle?.addEventListener("click", () => {
+    syncTermsCollapse();
   });
   payButton?.addEventListener("click", startPayment);
 
   if (!PAYMENT_ENABLED) {
     const paymentLabel = payButton?.querySelector(".payment-button-text");
     if (paymentLabel) {
-      paymentLabel.textContent = "Proceed to Payment";
+      paymentLabel.textContent = "Register & Continue";
     }
   }
 
   syncGroupFields();
   syncGuardianFields();
-  updateUploadState(videoInput, videoName);
-  updateUploadState(audioInput, audioName);
-  updateUploadState(photoInput, photoName);
+  syncTermsCollapse(false);
+  validateRequiredUploads();
+  syncConsentState();
   syncSubmitState();
 }
 
@@ -2137,6 +2376,17 @@ function setupVotingPage() {
       return;
     }
 
+    const otpRateLimit = consumeRateLimit(
+      `vote-otp:${countryCodeSelect?.value || "+91"}:${sanitizePhoneDigits(rawPhoneNumber)}`,
+      60000
+    );
+
+    if (!otpRateLimit.allowed) {
+      triggerVoteFieldAlert("vote-mobile");
+      setVoteStatus("Please wait before requesting OTP again.", "is-error");
+      return;
+    }
+
     setButtonLoading(sendOtpButton, true, "Sending");
     currentVoteConfirmation = null;
 
@@ -2244,6 +2494,9 @@ function setupSimpleForm({
   popupTitle,
   popupText,
   loadingText,
+  honeypotName = "website",
+  rateLimitKey = "",
+  rateLimitWindowMs = 45000,
 }) {
   const form = document.getElementById(formId);
 
@@ -2261,6 +2514,15 @@ function setupSimpleForm({
       status.classList.remove("is-success", "is-error");
     }
 
+    const honeypotValue = form.querySelector(`[name="${honeypotName}"]`)?.value.trim();
+    if (honeypotValue) {
+      if (status) {
+        status.textContent = "Unable to submit right now.";
+        status.classList.add("is-error");
+      }
+      return;
+    }
+
     form.querySelectorAll(".field").forEach((field) => markFieldValidity(field, true));
 
     if (!form.reportValidity()) {
@@ -2269,6 +2531,17 @@ function setupSimpleForm({
         status.classList.add("is-error");
       }
       return;
+    }
+
+    if (rateLimitKey) {
+      const limitState = consumeRateLimit(rateLimitKey, rateLimitWindowMs);
+      if (!limitState.allowed) {
+        if (status) {
+          status.textContent = "Please wait a few seconds before submitting again.";
+          status.classList.add("is-error");
+        }
+        return;
+      }
     }
 
     setButtonLoading(submitButton, true, loadingText);
@@ -2315,14 +2588,16 @@ function setupSponsorForm() {
     popupTitle: "Enquiry Submitted",
     popupText: "Thank you for your interest in partnering with BOTD. The team can now follow up with you.",
     loadingText: "Submitting",
+    honeypotName: "website",
+    rateLimitKey: "sponsor-form",
     payloadBuilder(form) {
       return {
-        contactPerson: form.name.value.trim(),
-        companyName: form.company.value.trim(),
+        contactPerson: sanitizeTextValue(form.name.value, 100),
+        companyName: sanitizeTextValue(form.company.value, 120),
         phone: form.phone.value.trim(),
-        email: form.email.value.trim(),
-        category: form.interest.value,
-        message: form.message.value.trim(),
+        email: sanitizeEmailValue(form.email.value),
+        category: sanitizeTextValue(form.interest.value, 80),
+        message: sanitizeMessageValue(form.message.value, 900),
       };
     },
   });
@@ -2338,61 +2613,54 @@ function setupContactForm() {
     popupTitle: "Message Sent",
     popupText: "Thank you! We'll get back to you soon.",
     loadingText: "Sending",
+    honeypotName: "website",
+    rateLimitKey: "contact-form",
     payloadBuilder(form) {
       return {
-        name: form.name.value.trim(),
-        email: form.email.value.trim(),
-        message: form.message.value.trim(),
+        name: sanitizeTextValue(form.name.value, 100),
+        email: sanitizeEmailValue(form.email.value),
+        message: sanitizeMessageValue(form.message.value, 900),
         phone: form.phone.value.trim(),
-        subject: form.subject.value,
+        subject: sanitizeTextValue(form.subject.value, 80),
       };
     },
   });
 }
 
 function initSite() {
+  createLoadingScreen();
   createPopup();
   prepareMediaLoading();
+  window.setTimeout(hideLoadingScreen, LOADING_TIMEOUT_MS);
   initializeAdminConsole();
   activeUser = getCurrentUser();
+  loadAuthSession();
   loadHomeContent();
+  loadSeasonContent();
+  loadEventsContent();
   loadVotingContent();
+  loadVotingSettings();
+  loadUiControlSettings();
+  loadPartyBlastSignals();
+  loadVoteTalliesRealtime();
+  loadJudgesRealtime();
+  loadSponsorsRealtime();
   loadCategoriesRealtime();
   loadTeamsRealtime();
-  loadAuthSession();
   loadTheme();
   prepareButtons();
   setupFieldStates();
   setupRevealAnimations();
   syncHeaderState();
+  syncScrollEffects();
+  setupHeroParallax();
+  setupInteractiveCards();
   setupAccordions();
   setupTabs();
   setupRegistrationForm();
   setupVotingPage();
   setupSponsorForm();
   setupContactForm();
-
-setTimeout(() => {
-  syncScrollEffects();
-}, 300);
-
-setTimeout(() => {
-  setupHeroParallax();
-  setupInteractiveCards();
-}, 500);
-setTimeout(() => {
-  loadSeasonContent();
-  loadEventsContent();
-  loadVoteTalliesRealtime();
-  loadJudgesRealtime();
-  loadSponsorsRealtime();
-}, 1500);
-setTimeout(() => {
-  loadVotingSettings();
-  loadUiControlSettings();
-  loadPartyBlastSignals();
-}, 2000);
-
 
   themeToggle?.addEventListener("click", toggleTheme);
   menuToggle?.addEventListener("click", toggleMenu);
@@ -2417,7 +2685,9 @@ setTimeout(() => {
   }, { passive: true });
 
   if (document.readyState === "complete") {
+    hideLoadingScreen();
   } else {
+    window.addEventListener("load", hideLoadingScreen, { once: true });
   }
 
   window.addEventListener("beforeunload", () => {
@@ -2430,8 +2700,3 @@ setTimeout(() => {
 }
 
 initSite();
-
-
-
-
-

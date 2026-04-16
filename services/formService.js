@@ -13,9 +13,11 @@ import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 import { db, storage } from "./firebase.js";
 
 const REGISTRATION_ROOT = "BOTD/season_1";
+const SPONSOR_ROOT = "BOTD/sponsors";
+const CONTACT_ROOT = "BOTD/contacts";
 const PDF_TITLE = "BOTD Consent & Registration Form";
-const BOTD_LOGO_PATH = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, "/")}assets/images/Final_BOTD_Logo.png`;
-const PRESENTED_BY_LOGO_PATH = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, "/")}assets/images/studiozlogo.webp`;
+const BOTD_LOGO_PATH = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, "/")}assets/images/logo/Final_BOTD_Logo.png`;
+const PRESENTED_BY_LOGO_PATH = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, "/")}assets/images/logo/studiozlogo.png`;
 const imageDataCache = new Map();
 
 function pad(value) {
@@ -70,6 +72,10 @@ function getMimeType(file, fallbackType) {
 
 function buildStoragePath(folderName, fileName) {
   return `${REGISTRATION_ROOT}/${folderName}/${fileName}`;
+}
+
+function buildRootedStoragePath(rootPath, folderName, fileName) {
+  return `${rootPath}/${folderName}/${fileName}`;
 }
 
 function normalizeValue(value) {
@@ -404,6 +410,79 @@ export async function uploadPDF({ folderName, fileName, blob }) {
   };
 }
 
+async function uploadPdfAsset({ rootPath, folderName, fileName, blob }) {
+  const storageRef = ref(storage, buildRootedStoragePath(rootPath, folderName, fileName));
+  const snapshot = await uploadBytes(storageRef, blob, {
+    contentType: "application/pdf",
+    cacheControl: "public,max-age=3600",
+  });
+  const url = await getDownloadURL(snapshot.ref);
+
+  return {
+    name: fileName,
+    url,
+    fullPath: snapshot.ref.fullPath,
+    contentType: "application/pdf",
+  };
+}
+
+async function generateSimpleRecordPdf({ title, subtitle, fields }) {
+  const doc = new jsPDF({
+    unit: "pt",
+    format: "a4",
+  });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 44;
+  let cursorY = 138;
+
+  const [botdLogo, presentedLogo] = await Promise.all([
+    imageSourceToDataUrl(BOTD_LOGO_PATH).catch(() => ""),
+    imageSourceToDataUrl(PRESENTED_BY_LOGO_PATH).catch(() => ""),
+  ]);
+
+  doc.setFillColor(17, 17, 17);
+  doc.rect(0, 0, pageWidth, 112, "F");
+  safeAddImage(doc, botdLogo, "JPEG", margin, 18, 124, 50, title);
+  doc.setTextColor(246, 182, 60);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(24);
+  doc.text(title, margin + 140, 50);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text(subtitle, margin + 140, 72);
+  doc.setTextColor(255, 255, 255);
+  doc.text("Presented by Bee Infinity Groups", pageWidth - 244, 30);
+  safeAddImage(doc, presentedLogo, "JPEG", pageWidth - 150, 42, 92, 36, "Presented by logo");
+  doc.setDrawColor(246, 182, 60);
+  doc.line(margin, 92, pageWidth - margin, 92);
+
+  fields.forEach(([label, value]) => {
+    const lines = doc.splitTextToSize(normalizeValue(value), pageWidth - (margin * 2) - 26);
+    const blockHeight = 38 + (Math.max(lines.length - 1, 0) * 14);
+
+    if (cursorY + blockHeight > pageHeight - 48) {
+      doc.addPage();
+      cursorY = 54;
+    }
+
+    doc.setDrawColor(231, 235, 240);
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(margin, cursorY - 18, pageWidth - (margin * 2), blockHeight, 12, 12, "FD");
+    doc.setTextColor(110, 110, 110);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(String(label).toUpperCase(), margin + 14, cursorY);
+    doc.setTextColor(24, 24, 24);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(lines, margin + 14, cursorY + 18);
+    cursorY += blockHeight + 12;
+  });
+
+  return doc.output("blob");
+}
+
 function createProgressTracker(totalBytes = 0, onProgress) {
   const transferredMap = new Map();
 
@@ -595,6 +674,33 @@ export async function submitRegistration(payload) {
 }
 
 export async function submitSponsorEnquiry(payload) {
+  const folderName = formatName(payload.companyName || payload.contactPerson || "sponsor");
+  const stamp = buildTimestampParts();
+  const pdfBlob = await generateSimpleRecordPdf({
+    title: "BOTD Sponsorship Enquiry",
+    subtitle: "Sponsor lead summary",
+    fields: [
+      ["Company / Brand Name", payload.companyName],
+      ["Contact Person Name", payload.contactPerson],
+      ["Phone", payload.phone],
+      ["Email", payload.email],
+      ["Sponsorship Interest", payload.category],
+      ["Message", payload.message],
+      ["Submitted At", new Date().toLocaleString()],
+    ],
+  });
+  const pdfAsset = await uploadPdfAsset({
+    rootPath: SPONSOR_ROOT,
+    folderName,
+    fileName: `sponsorship_enquiry_${stamp.compact}.pdf`,
+    blob: pdfBlob,
+  });
+  console.log("[BOTD] Sponsor enquiry PDF stored", {
+    folderName,
+    pdfUrl: pdfAsset.url,
+    fullPath: pdfAsset.fullPath,
+  });
+
   return addDoc(collection(db, "sponsors"), {
     companyName: payload.companyName,
     company: payload.companyName,
@@ -603,14 +709,49 @@ export async function submitSponsorEnquiry(payload) {
     email: payload.email,
     category: payload.category,
     interest: payload.category,
+    pdfUrl: pdfAsset.url,
+    pdfName: pdfAsset.name,
+    folderName,
+    folderPath: `${SPONSOR_ROOT}/${folderName}`,
     createdAt: serverTimestamp(),
     recordType: "lead",
     visible: false,
     message: payload.message || "",
+    uploadDebug: {
+      pdfGenerated: true,
+      storedAt: pdfAsset.fullPath,
+      completedAt: new Date().toISOString(),
+    },
   });
 }
 
 export async function submitContactMessage(payload) {
+  const folderName = formatName(payload.name || payload.email || "contact");
+  const stamp = buildTimestampParts();
+  const pdfBlob = await generateSimpleRecordPdf({
+    title: "BOTD Contact Message",
+    subtitle: "Website enquiry summary",
+    fields: [
+      ["Full Name", payload.name],
+      ["Phone", payload.phone],
+      ["Email", payload.email],
+      ["Subject", payload.subject],
+      ["Message", payload.message],
+      ["Submitted At", new Date().toLocaleString()],
+    ],
+  });
+  const pdfAsset = await uploadPdfAsset({
+    rootPath: CONTACT_ROOT,
+    folderName,
+    fileName: `contact_message_${stamp.compact}.pdf`,
+    blob: pdfBlob,
+  });
+  console.log("[BOTD] Contact enquiry PDF stored", {
+    folderName,
+    pdfUrl: pdfAsset.url,
+    fullPath: pdfAsset.fullPath,
+  });
+
   return addDoc(collection(db, "contacts"), {
     name: payload.name,
     email: payload.email,
@@ -618,5 +759,14 @@ export async function submitContactMessage(payload) {
     createdAt: serverTimestamp(),
     phone: payload.phone || "",
     subject: payload.subject || "",
+    pdfUrl: pdfAsset.url,
+    pdfName: pdfAsset.name,
+    folderName,
+    folderPath: `${CONTACT_ROOT}/${folderName}`,
+    uploadDebug: {
+      pdfGenerated: true,
+      storedAt: pdfAsset.fullPath,
+      completedAt: new Date().toISOString(),
+    },
   });
 }

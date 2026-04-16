@@ -354,6 +354,7 @@ function mountRegistrationForm() {
     event.preventDefault();
   });
 
+  
   button?.addEventListener("click", async () => {
     if (!form.reportValidity()) {
       showState(status, "Please complete all required fields before submitting.", "error");
