@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+*.zip
+*.rar
+*.mp4
+*.psd
+.env
