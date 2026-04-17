@@ -5,7 +5,11 @@ import {
   query,
   where,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-import { db } from "./firebase.js";
+import {
+  get,
+  ref as realtimeRef,
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+import { db, realtimeDb } from "./firebase.js";
 
 async function readCollectionItems(collectionName, constraints = []) {
   const ref = constraints.length
@@ -32,5 +36,17 @@ export function fetchVoteTallies() {
 }
 
 export function fetchTeams() {
-  return readCollectionItems("teams", [orderBy("votes", "desc")]);
+  return get(realtimeRef(realtimeDb, "contestants")).then((snapshot) => {
+    const value = snapshot.val() || {};
+    return Object.entries(value)
+      .map(([id, item]) => ({
+        ...item,
+        id,
+        visible: (item.visible ?? item.isVisible) !== false,
+        approved: (item.approved ?? true) !== false,
+        categoryId: item.categoryId || item.category || "",
+        votes: Number(item.votes || 0),
+      }))
+      .sort((left, right) => Number(right.votes || 0) - Number(left.votes || 0));
+  });
 }

@@ -61,245 +61,182 @@
       </div>
     </header>
 
-    <main>
-      <!-- About Intro -->
-      <section class="hero about-hero">
-        <div class="hero-backdrop about-hero-backdrop" aria-hidden="true"></div>
-        <div class="hero-spotlight hero-spotlight-left" aria-hidden="true"></div>
-        <div class="hero-spotlight hero-spotlight-right" aria-hidden="true"></div>
-        <div class="hero-beam" aria-hidden="true"></div>
-        <div class="hero-stage-glow" aria-hidden="true"></div>
-        <div class="hero-grid-lines" aria-hidden="true"></div>
-        <div class="container about-hero-content">
-          <div class="about-hero-copy reveal">
-            <p class="eyebrow">About BOTD</p>
-            <h1>About Battle Of The Dance</h1>
-<p class="hero-subtitle">A Platform Built for Real Talent</p>
-<p class="hero-text">
-  Battle Of The Dance is a hybrid platform where digital auditions meet the live stage, created to discover and recognize pure talent — not driven by TRP or mass competition, but built to give every dancer a fair and global opportunity.
-</p>
+    <main class="cinematic-about">
+      <section class="cinematic-intro" id="cinematic-intro" data-cinematic-intro="on">
+        <div class="cinematic-bg" aria-hidden="true"></div>
+        <div class="cinematic-spotlight cinematic-spotlight-left" aria-hidden="true"></div>
+        <div class="cinematic-spotlight cinematic-spotlight-right" aria-hidden="true"></div>
+        <div class="cinematic-intro-content">
+          <p class="cinematic-kicker">BOTD PRESENTS</p>
+          <h1 class="cinematic-title-sequence" aria-label="This is not just a dance show. This is Battle Of The Dance. Where talent meets opportunity.">
+            <span>THIS IS NOT JUST A DANCE SHOW</span>
+            <span>THIS IS BATTLE OF THE DANCE</span>
+            <span>WHERE TALENT MEETS OPPORTUNITY</span>
+          </h1>
+          <a class="cinematic-scroll-cue cinematic-cta" href="#who-we-are">Explore BOTD</a>
+        </div>
+      </section>
+
+      <section class="cinematic-scene about-brand-scene what-is-botd-scene" id="who-we-are">
+        <div class="paint-transition paint-transition-top" aria-hidden="true"></div>
+        <div class="container cinematic-scene-grid">
+          <div class="cinematic-copy reveal">
+            <p class="eyebrow">What is BOTD?</p>
+            <h2>A platform built to discover, showcase, and elevate real dance talent.</h2>
+            <p>
+              BATTLE OF THE DANCE (BOTD) is not just a competition - it's a platform built to discover, showcase, and elevate real dance talent.
+            </p>
+            <p>
+              It connects passionate performers with real opportunities, industry exposure, and a stage that goes beyond just winning.
+            </p>
+            <p>
+              BOTD is designed to create impact - where every dancer gets visibility, recognition, and a chance to grow.
+            </p>
+          </div>
+          <div class="cinematic-proof-card reveal reveal-delay-1">
+            <span class="spray-tag">BOTD</span>
+            <ul>
+              <li>Raw talent discovery</li>
+              <li>Real stage visibility</li>
+              <li>Industry-facing recognition</li>
+              <li>Community impact</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="cinematic-scene about-brand-scene why-botd-scene">
+        <div class="container cinematic-scene-grid cinematic-scene-grid-reverse">
+          <div class="cinematic-proof-card brand-impact-card reveal">
+            <span class="spray-tag">WHY</span>
+            <ul>
+              <li>Talent matters more than background</li>
+              <li>Visibility should not depend on luck</li>
+              <li>Every dancer deserves a fair platform</li>
+              <li>Recognition should create future growth</li>
+            </ul>
+          </div>
+          <div class="cinematic-copy reveal reveal-delay-1">
+            <p class="eyebrow">Why BOTD Exists</p>
+            <h2>To break the gap between talent and the right stage.</h2>
+            <p>
+              Many talented dancers never get the right stage to prove themselves.
+            </p>
+            <p>
+              BOTD was created to break that gap - to give dancers a platform where talent matters more than background.
+            </p>
+            <p>
+              From auditions to finale, every step is designed to be fair, transparent, and impactful.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section about-video-section cinematic-video-scene">
+        <div class="container">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Community Voice</p>
+            <h2>Listen What People Say About BOTD</h2>
+            <p>Real voices, reactions, and moments that show how the BOTD energy feels from the inside.</p>
           </div>
 
-          <div class="about-hero-panel reveal reveal-delay-1">
-            <div class="about-hero-frame">
-              <img src="assets/images/posters/poster1.webp" alt="BOTD platform poster">
+          <div class="about-video-slider reveal" id="about-video-slider" aria-label="What people say about BOTD video slider" data-video-paused-by-user="true">
+            <button class="about-video-nav about-video-nav-prev" id="about-video-prev" type="button" aria-label="Previous video">
+              <span aria-hidden="true">&larr;</span>
+            </button>
+            <div class="about-video-viewport">
+              <div class="about-video-track" id="about-video-track">
+                <article class="about-video-slide">
+                  <div class="about-video-frame">
+                    <video preload="metadata" playsinline controls poster="assets/images/posters/poster1.webp">
+                      <source src="assets/video/WhatPeopleSay/wps.mp4" type="video/mp4">
+                    </video>
+                    <span class="about-video-play" aria-hidden="true"></span>
+                  </div>
+                </article>
+              </div>
+            </div>
+            <button class="about-video-nav about-video-nav-next" id="about-video-next" type="button" aria-label="Next video">
+              <span aria-hidden="true">&rarr;</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="cinematic-scene founders-cinematic-section">
+        <div class="container">
+          <div class="section-heading reveal">
+            <p class="eyebrow">Founders</p>
+            <h2>FOUNDERS</h2>
+            <p>The people building the BOTD movement.</p>
+          </div>
+
+          <div class="founders-cinematic-grid founders-showcase-grid">
+            <article class="founder-cinema-card founder-showcase-card founder-showcase-card-reverse founder-surya-card reveal">
+              <div class="founder-cinematic-copy">
+                <h3>Surya Sharavana</h3>
+                <p class="founder-cinematic-role">Founder - BOTD</p>
+                <p>
+                  BOTD was built from a vision to create a real platform for dancers who deserve recognition beyond limits. The mission is to give every dancer a stage where talent speaks louder than anything else.
+                </p>
+                <span class="founder-signature">Surya</span>
+              </div>
+              <div class="founder-cinematic-image founder-cinematic-image-wide">
+                <img src="assets/images/founder/surya.webp" alt="Surya Sharavana, Founder of BOTD" loading="lazy" decoding="async">
+              </div>
+            </article>
+
+            <article class="founder-cinema-card founder-showcase-card reveal reveal-delay-1">
+              <div class="founder-cinematic-image">
+                <img src="assets/images/founder/bharathi_botd.webp" alt="Bharathi M, Co-Founder of BOTD" loading="lazy" decoding="async">
+              </div>
+              <div class="founder-cinematic-copy">
+                <h3>Bharathi M</h3>
+                <p class="founder-cinematic-role">Co-Founder - BOTD</p>
+                <p>
+                  Focused on building structure, reach, and opportunities, BOTD is designed to connect talent with real industry exposure and create a strong dance community.
+                </p>
+                <span class="founder-signature">Bharathi</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section vision-mission-section">
+        <div class="container">
+          <div class="vision-mission-panel reveal">
+            <div class="paint-splash paint-splash-one" aria-hidden="true"></div>
+            <div class="paint-splash paint-splash-two" aria-hidden="true"></div>
+            <div class="vision-mission-head">
+              <p class="eyebrow">Vision &amp; Mission</p>
+              <h2>Raw Talent. Real Recognition. Industry Roads.</h2>
+            </div>
+
+            <div class="vision-mission-grid">
+              <article class="vision-statement">
+                <span class="graffiti-label">VISION</span>
+                <p>
+                  To build a powerful platform where <mark>raw dance talent</mark> is discovered, recognized, and elevated to <mark>industry-level opportunities</mark>.
+                </p>
+              </article>
+
+              <article class="mission-statement">
+                <span class="graffiti-label">MISSION</span>
+                <ul>
+                  <li>Provide equal opportunity for every dancer to showcase talent</li>
+                  <li>Create a transparent and fair competition system</li>
+                  <li>Connect dancers with industry professionals</li>
+                  <li>Build a strong dance community through collaboration and exposure</li>
+                  <li>Empower performers beyond the stage through networking and growth opportunities</li>
+                </ul>
+              </article>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Story -->
-      <section class="section about-story">
-        <div class="container">
-          <div class="section-heading reveal">
-<p class="eyebrow">Our Story</p>
-<h2>Built to make the process real, transparent, and talent-focused</h2>
-</div>
-
-<div class="story-layout">
-<article class="story-card reveal">
-  <p>
-    Battle Of The Dance (BOTD) was created with a simple belief — every talent deserves to be seen, fairly and truly.
-  </p>
-  <p>
-    Today, many competitions are shaped by formats and entertainment demands, where thousands participate but only a few receive meaningful recognition.
-  </p>
-  <p>
-    BOTD follows a more focused and balanced approach.
-  </p>
-  <p>
-    By keeping the process transparent and structured, it aims to create a space where talent is genuinely noticed and valued.
-  </p>
-</article>
-
-            <aside class="story-aside reveal reveal-delay-1">
-              <div class="story-badge">
-                <span class="story-badge-title">What BOTD Stands For</span>
-                <ul class="simple-list">
-                  <li>True talent discovery</li>
-                  <li>Fair and balanced judging</li>
-                  <li>Real opportunities for dancers</li>
-                  <li>Building a strong and pure dance community</li>
-                  <li>Creating a platform where every dancer is valued</li>
-                </ul>
-              </div>
-            </aside>
-          </div>
-        </div>
-      </section>
-
-      <!-- Problem -->
-      <section class="section section-alt">
-        <div class="container">
-          <div class="section-heading reveal">
-            <p class="eyebrow">The Problem</p>
-            <h2>Why BOTD needed to exist</h2>
-            <p>
-              Many dancers work with extraordinary discipline and passion, yet the journey from audition to visibility remains limited.
-            </p>
-          </div>
-
-          <div class="problem-grid">
-            <article class="problem-card reveal">
-              <h3>Limited opportunities</h3>
-              <p>Many talented dancers still face too few real opportunities despite genuine ability.</p>
-            </article>
-            <article class="problem-card reveal reveal-delay-1">
-              <h3>Inconsistent selection</h3>
-              <p>Selection processes do not always reflect performance quality or true potential.</p>
-            </article>
-            <article class="problem-card reveal reveal-delay-2">
-              <h3>Low visibility after auditions</h3>
-              <p>Even strong performers can disappear from view once the audition stage is over.</p>
-            </article>
-          </div>
-
-          <div class="problem-note reveal">
-            <p>
-              BOTD exists to bridge that gap by creating a platform where performance matters most.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Differentiators -->
-      <section class="section">
-        <div class="container">
-          <div class="section-heading reveal">
-            <p class="eyebrow">What Makes BOTD Different</p>
-            <h2>A format designed around credibility and opportunity</h2>
-          </div>
-
-          <div class="difference-grid">
-            <article class="difference-card reveal">
-              <span class="card-index">01</span>
-              <h3>Talent Recognizes Talent</h3>
-              <p>Judging by experienced dancers and professionals brings deeper understanding to evaluation.</p>
-            </article>
-            <article class="difference-card reveal reveal-delay-1">
-              <span class="card-index">02</span>
-              <h3>Balanced Evaluation</h3>
-              <p>Judges contribute 50% and the audience contributes 50%, creating a more complete result.</p>
-            </article>
-            <article class="difference-card reveal reveal-delay-2">
-              <span class="card-index">03</span>
-              <h3>Real Recognition</h3>
-              <p>BOTD is not only about selection, but about giving talent visibility and a meaningful platform.</p>
-            </article>
-            <article class="difference-card reveal">
-              <span class="card-index">04</span>
-              <h3>Hybrid Format</h3>
-              <p>It begins with online auditions and continues toward a live stage experience built for real performance energy.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- Experience -->
-      <section class="section section-alt">
-        <div class="container experience-layout">
-          <div class="section-heading reveal">
-            <p class="eyebrow">The Experience</p>
-            <h2>It starts with a screen, but it doesn't end there</h2>
-            <p>
-              From recording your audition to performing live on stage — BOTD is a journey of growth, confidence, and recognition.
-            </p>
-          </div>
-
-          <div class="experience-panels">
-            <article class="experience-card reveal">
-              <h3>Confidence</h3>
-              <p>BOTD gives dancers a stage to show who they are, not just what they can submit.</p>
-            </article>
-            <article class="experience-card reveal reveal-delay-1">
-              <h3>Growth</h3>
-              <p>Each step from audition to stage performance becomes part of a more meaningful artistic journey.</p>
-            </article>
-            <article class="experience-card reveal reveal-delay-2">
-              <h3>Recognition</h3>
-              <p>Strong performances are meant to be seen, remembered, and respected.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <!-- People Behind BOTD -->
-      <section class="section">
-        <div class="container">
-          <div class="section-heading reveal">
-            <p class="eyebrow">People Behind BOTD</p>
-            <h2>The people shaping the vision behind the platform</h2>
-          </div>
-
-          <div class="founders-grid">
-            <article class="founder-card reveal">
-              <div class="founder-image-wrap">
-                <img class="founder-image" src="assets/images/founder/surya.webp" alt="Surya Sharavana, Founder of BOTD">
-              </div>
-              <div class="founder-content">
-                <h3>Surya Sharavana</h3>
-                <p class="founder-role">Founder, BOTD</p>
-                <p>
-                  Vision-driven creator behind BOTD, focused on building a platform that truly recognizes and elevates dance talent.
-                </p>
-              </div>
-            </article>
-
-            <article class="founder-card reveal reveal-delay-1">
-              <div class="founder-image-wrap">
-                <img class="founder-image" src="assets/images/founder/bharathi_botd.webp" alt="Bharathi, Co-Founder of BOTD">
-              </div>
-              <div class="founder-content">
-                <h3>Bharathi</h3>
-                <p class="founder-role">Co-Founder, BOTD</p>
-                <p>
-                  Co-creator of BOTD, contributing to building a fair and impactful platform for dancers.
-                </p>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-<!-- Vision -->
-<section class="section">
-  <div class="container">
-    <div class="section-heading reveal">
-      <p class="eyebrow">Vision & Future</p>
-      <h2>Starting in Bangalore, with a long-term vision</h2>
-      <p>
-        BOTD begins with the Bangalore edition, with a clear plan to grow steadily across regions and build a wider platform over time.
-      </p>
-    </div>
-
-    <div class="vision-layout">
-      <article class="vision-card reveal">
-        <h3>Future Direction</h3>
-        <ul class="simple-list">
-          <li>Collaboration with industry professionals</li>
-          <li>Expanded live stage experiences</li>
-          <li>Growth across seasons and locations</li>
-        </ul>
-      </article>
-
-      <article class="vision-poster reveal reveal-delay-1">
-        <img src="assets/images/posters/poster2.webp" alt="BOTD Bangalore edition poster">
-      </article>
-    </div>
-  </div>
-</section>
-
-      <!-- CTA -->
-      <section class="cta-section reveal">
-        <div class="container cta-panel">
-          <p class="eyebrow">Next Step</p>
-          <h2>This is Just the Beginning</h2>
-          <p>Your journey starts here.</p>
-          <div class="cta-actions">
-            <a class="button button-primary" href="seasons.html">Explore Seasons</a>
-          </div>
-        </div>
-      </section>
+      <audio id="about-cinematic-audio" preload="none" muted loop hidden></audio>
     </main>
 
     <footer class="footer">
@@ -339,9 +276,9 @@
         <div>
           <h3>Social</h3>
           <div class="footer-links">
-            <a href="https://instagram.com/botd.in" aria-label="Instagram placeholder">Instagram</a>
-            <a href="https://youtube.com/@botd_in" aria-label="YouTube placeholder">YouTube</a>
-            <a href="https://www.facebook.com/share/17BytZTPC9" aria-label="Facebook placeholder">Facebook</a>
+            <a href="https://instagram.com/botd.in" aria-label="BOTD Instagram">Instagram</a>
+            <a href="https://youtube.com/@botd_in" aria-label="BOTD YouTube">YouTube</a>
+            <a href="https://www.facebook.com/share/17BytZTPC9" aria-label="BOTD Facebook">Facebook</a>
           </div>
         </div>
       </div>

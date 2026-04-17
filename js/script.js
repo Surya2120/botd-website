@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import {
@@ -27,6 +28,12 @@ import { db } from "../services/firebase.js";
 import { submitContactMessage, submitRegistration, submitSponsorEnquiry } from "../services/formService.js";
 import { subscribeHomeContent } from "../services/homeService.js";
 import {
+  CASHFREE_CONFIG,
+  createCashfreeOrder,
+  loadCashfreeConfig,
+  verifyCashfreeOrder,
+} from "../services/paymentService.js";
+import {
   setLeaderboardVisibility,
   setVoteVisibility,
   subscribeEventSignals,
@@ -42,8 +49,23 @@ const LOGO_PATH = "assets/images/logo/Final_BOTD_Logo.png";
 const CONTENT_COLLECTION = "adminContent";
 const JUDGES_COLLECTION = "judges";
 const SPONSORS_COLLECTION = "sponsors";
+const POSTERS_COLLECTION = "posters";
+const VIDEOS_COLLECTION = "videos";
 const CACHE_TTL_MS = 1000 * 60 * 30;
 const LOADING_TIMEOUT_MS = 2400;
+const FALLBACK_ABOUT_VIDEOS = [
+  "assets/video/WhatPeopleSay/wps.mp4",
+];
+const FALLBACK_EVENT_POSTERS = [
+  "assets/images/posters/poster1.webp",
+  "assets/images/posters/poster2.webp",
+  "assets/images/posters/poster3.webp",
+  "assets/images/posters/poster4.webp",
+  "assets/images/posters/poster5.webp",
+  "assets/images/posters/poster6.webp",
+  "assets/images/posters/poster7.webp",
+  "assets/images/posters/poster8.webp",
+];
 
 const CONTENT_DOCS = {
   season: "seasonPage",
@@ -56,24 +78,6 @@ const JUDGE_MAPPINGS = [
   { docId: "judge-b", prefix: "judge2" },
   { docId: "judge-c", prefix: "judge3" },
 ];
-const SPONSOR_TIER_CONFIG = [
-  { key: "presented-by", title: "Title Sponsor", sectionClass: "sponsor-band-presented", gridClass: "sponsor-grid-feature", cardClass: "sponsor-logo-card-feature" },
-  { key: "powered-by", title: "Powered By", sectionClass: "sponsor-band-power", gridClass: "sponsor-grid-power", cardClass: "sponsor-logo-card-power" },
-  { key: "co-powered-by", title: "Co Powered By", sectionClass: "sponsor-band-power", gridClass: "sponsor-grid-power", cardClass: "sponsor-logo-card-power" },
-  { key: "associate-sponsors", title: "Associate Sponsors", sectionClass: "sponsor-band-associate", gridClass: "sponsor-grid-associate", cardClass: "sponsor-logo-card-associate" },
-  { key: "supporting-sponsor", title: "Supporting Sponsor", sectionClass: "sponsor-band-associate", gridClass: "sponsor-grid-associate", cardClass: "sponsor-logo-card-associate" },
-  { key: "venue-partner", title: "Venue Partner", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
-  { key: "media-partner", title: "Media Partner", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
-  { key: "social-media", title: "Social Media", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
-  { key: "influencer-partner", title: "Influencer Partner", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
-  { key: "academy-partner", title: "Academy Partner", sectionClass: "sponsor-band-partner", gridClass: "sponsor-grid-partner", cardClass: "sponsor-logo-card-partner", family: "Partners" },
-  { key: "fashion", title: "Fashion", sectionClass: "sponsor-band-brand", gridClass: "sponsor-grid-brand", cardClass: "sponsor-logo-card-brand", family: "Brand Partner" },
-  { key: "beauty", title: "Beauty", sectionClass: "sponsor-band-brand", gridClass: "sponsor-grid-brand", cardClass: "sponsor-logo-card-brand", family: "Brand Partner" },
-  { key: "fitness", title: "Fitness", sectionClass: "sponsor-band-brand", gridClass: "sponsor-grid-brand", cardClass: "sponsor-logo-card-brand", family: "Brand Partner" },
-  { key: "food-and-beverage", title: "Food & Beverage", sectionClass: "sponsor-band-utility", gridClass: "sponsor-grid-utility", cardClass: "sponsor-logo-card-utility", family: "Utility Partner" },
-  { key: "video-partner", title: "Video Partner", sectionClass: "sponsor-band-video", gridClass: "sponsor-grid-video", cardClass: "sponsor-logo-card-video" },
-];
-
 const confirmBox = document.getElementById("confirm-box");
 const confirmTeamName = document.getElementById("confirm-team-name");
 const confirmVoteBtn = document.getElementById("confirm-vote");
@@ -82,12 +86,14 @@ const changeSelectionBtn = document.getElementById("change-selection");
 let isConfirmed = false;
 
 const body = document.body;
+const root = document.documentElement;
 const themeToggle = document.getElementById("theme-toggle");
 const themeLabel = themeToggle?.querySelector(".theme-toggle-label");
 const menuToggle = document.getElementById("menu-toggle");
 const siteNav = document.getElementById("site-nav");
 const topbar = document.querySelector(".topbar");
 const hero = document.querySelector(".hero");
+const cinematicScenes = document.querySelectorAll(".cinematic-scene");
 const parallaxLayers = document.querySelectorAll(".poster-card");
 const interactiveCards = document.querySelectorAll(
   ".highlight-card, .glass-card, .concept-card, .step-card, .vote-card, .category-card, .benefit-card, .cta-panel, .instruction-card, .contact-info-card, .sponsor-logo-card, .founder-card, .contact-form-card, .registration-card, .voting-form-card, .title-sponsor-banner, .powered-sponsor-card, .season-banner"
@@ -113,10 +119,14 @@ let liveVoteTallies = {};
 let liveUiControls = {
   showVotes: false,
   showLeaderboard: true,
+  registrationOpen: true,
+  registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
 };
 let currentVoteConfirmation = null;
 let activeUser = null;
 let lastPartyBlastValue = null;
+let registrationPortalController = null;
+let eventPosterScrollFrame = null;
 const lastRenderedVoteCounts = {};
 const animatedCountState = {};
 const votingUiState = {
@@ -329,6 +339,282 @@ function renderEventStages(stages = []) {
   }
 }
 
+function normalizePosterItem(item = {}, index = 0) {
+  return {
+    id: item.id || `poster-${index + 1}`,
+    imageUrl: item.imageUrl || item.image || item.url || "",
+    isActive: item.isActive !== false,
+    order: Number(item.order ?? item.sortOrder ?? index + 1),
+  };
+}
+
+function getFallbackPosters() {
+  return FALLBACK_EVENT_POSTERS.map((imageUrl, index) => ({
+    id: `fallback-poster-${index + 1}`,
+    imageUrl,
+    isActive: true,
+    order: index + 1,
+  }));
+}
+
+function renderEventPosterSlider(posters = []) {
+  const track = document.getElementById("events-poster-track");
+
+  if (!track) {
+    return;
+  }
+
+  const activePosters = posters
+    .map(normalizePosterItem)
+    .filter((poster) => poster.isActive && poster.imageUrl)
+    .sort((left, right) => left.order - right.order);
+  const displayPosters = activePosters.length ? activePosters : getFallbackPosters();
+  const posterMarkup = displayPosters.map((poster, index) => `
+    <figure class="vertical-poster-card">
+      <img
+        src="${poster.imageUrl}"
+        alt="BOTD event poster ${index + 1}"
+        loading="lazy"
+        decoding="async"
+      >
+    </figure>
+  `).join("");
+
+  track.innerHTML = `
+    <div class="vertical-poster-set">${posterMarkup}</div>
+    <div class="vertical-poster-set" aria-hidden="true">${posterMarkup}</div>
+  `;
+
+  window.requestAnimationFrame(() => startEventPosterAutoScroll(track));
+}
+
+function startEventPosterAutoScroll(track) {
+  const slider = document.getElementById("events-poster-slider");
+
+  if (!track || !slider) {
+    return;
+  }
+
+  if (eventPosterScrollFrame) {
+    window.cancelAnimationFrame(eventPosterScrollFrame);
+    eventPosterScrollFrame = null;
+  }
+
+  let offset = 0;
+  let lastTime = window.performance.now();
+  const speed = Number.parseFloat(slider.dataset.speed || "34");
+
+  track.style.animation = "none";
+  track.style.willChange = "transform";
+
+  if (slider.dataset.posterScrollBound !== "true") {
+    slider.addEventListener("pointerenter", () => {
+      slider.dataset.posterPaused = "true";
+    });
+    slider.addEventListener("pointerleave", () => {
+      slider.dataset.posterPaused = "false";
+    });
+    slider.addEventListener("focusin", () => {
+      slider.dataset.posterPaused = "true";
+    });
+    slider.addEventListener("focusout", () => {
+      slider.dataset.posterPaused = "false";
+    });
+    slider.dataset.posterScrollBound = "true";
+  }
+
+  function getLoopDistance() {
+    const firstSet = track.querySelector(".vertical-poster-set");
+    return Math.max(1, Number(firstSet?.offsetHeight || 0));
+  }
+
+  function tick(now) {
+    const elapsed = Math.min(64, now - lastTime);
+    lastTime = now;
+
+    if (slider.dataset.posterPaused !== "true") {
+      const loopDistance = getLoopDistance();
+      offset = (offset + ((elapsed / 1000) * speed)) % loopDistance;
+      track.style.transform = `translate3d(0, -${offset}px, 0)`;
+    }
+
+    eventPosterScrollFrame = window.requestAnimationFrame(tick);
+  }
+
+  eventPosterScrollFrame = window.requestAnimationFrame(tick);
+}
+
+function loadEventPosters() {
+  const track = document.getElementById("events-poster-track");
+
+  if (!track) {
+    return;
+  }
+
+  renderEventPosterSlider(getFallbackPosters());
+
+  try {
+    const postersRef = collection(db, POSTERS_COLLECTION);
+    registerSubscription(
+      onSnapshot(
+        postersRef,
+        (snapshot) => {
+          const posters = snapshot.docs.map((docItem) => ({ id: docItem.id, ...docItem.data() }));
+          renderEventPosterSlider(posters);
+        },
+        (error) => {
+          console.error("[BOTD] Failed to load event posters", error);
+          renderEventPosterSlider(getFallbackPosters());
+        }
+      )
+    );
+  } catch (error) {
+    console.error("[BOTD] Event poster listener failed", error);
+    renderEventPosterSlider(getFallbackPosters());
+  }
+}
+
+function normalizeVideoItem(item = {}, index = 0) {
+  return {
+    id: item.id || `video-${index + 1}`,
+    videoUrl: item.videoUrl || item.url || "",
+    isActive: item.isActive !== false,
+    order: Number(item.order ?? item.sortOrder ?? index + 1),
+  };
+}
+
+function getFallbackAboutVideos() {
+  return FALLBACK_ABOUT_VIDEOS.map((videoUrl, index) => ({
+    id: `fallback-video-${index + 1}`,
+    videoUrl,
+    isActive: true,
+    order: index + 1,
+  }));
+}
+
+function renderAboutVideoSlider(videos = []) {
+  const track = document.getElementById("about-video-track");
+  const slider = document.getElementById("about-video-slider");
+
+  if (!track || !slider) {
+    return;
+  }
+
+  const activeVideos = videos
+    .map(normalizeVideoItem)
+    .filter((video) => video.isActive && video.videoUrl)
+    .sort((left, right) => left.order - right.order);
+  const displayVideos = activeVideos.length ? activeVideos : getFallbackAboutVideos();
+
+  track.innerHTML = displayVideos.map((video, index) => `
+    <article class="about-video-slide" data-video-index="${index}">
+      <div class="about-video-frame">
+        <video preload="metadata" playsinline controls poster="assets/images/posters/poster1.webp">
+          <source src="${video.videoUrl}" type="video/mp4">
+        </video>
+        <span class="about-video-play" aria-hidden="true"></span>
+      </div>
+    </article>
+  `).join("");
+  slider.dataset.totalVideos = String(displayVideos.length);
+  slider.dataset.activeVideo = "0";
+  setupAboutVideoSlider();
+}
+
+function setupAboutVideoSlider() {
+  const slider = document.getElementById("about-video-slider");
+  const track = document.getElementById("about-video-track");
+  const previousButton = document.getElementById("about-video-prev");
+  const nextButton = document.getElementById("about-video-next");
+
+  if (!slider || !track || !previousButton || !nextButton) {
+    return;
+  }
+
+  function pauseInactiveVideos() {
+    track.querySelectorAll("video").forEach((video) => {
+      video.pause();
+    });
+  }
+
+  function updateSlider(nextIndex) {
+    const currentTotal = Number(slider.dataset.totalVideos || 0);
+
+    if (!currentTotal) {
+      return;
+    }
+
+    const nextActiveIndex = (nextIndex + currentTotal) % currentTotal;
+    slider.dataset.activeVideo = String(nextActiveIndex);
+    track.style.transform = `translate3d(-${nextActiveIndex * 100}%, 0, 0)`;
+    previousButton.disabled = currentTotal <= 1;
+    nextButton.disabled = currentTotal <= 1;
+    pauseInactiveVideos();
+  }
+
+  previousButton.onclick = () => {
+    updateSlider(Number(slider.dataset.activeVideo || 0) - 1);
+  };
+  nextButton.onclick = () => {
+    updateSlider(Number(slider.dataset.activeVideo || 0) + 1);
+  };
+
+  if (slider.dataset.videoSliderBound !== "true") {
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+
+    slider.addEventListener("touchstart", (event) => {
+      const touch = event.touches?.[0];
+      swipeStartX = touch?.clientX || 0;
+      swipeStartY = touch?.clientY || 0;
+    }, { passive: true });
+
+    slider.addEventListener("touchend", (event) => {
+      const touch = event.changedTouches?.[0];
+      const deltaX = (touch?.clientX || 0) - swipeStartX;
+      const deltaY = (touch?.clientY || 0) - swipeStartY;
+
+      if (Math.abs(deltaX) > 48 && Math.abs(deltaX) > Math.abs(deltaY)) {
+        updateSlider(Number(slider.dataset.activeVideo || 0) + (deltaX < 0 ? 1 : -1));
+      }
+    }, { passive: true });
+
+    slider.dataset.videoSliderBound = "true";
+  }
+
+  updateSlider(Number(slider.dataset.activeVideo || 0));
+}
+
+function loadAboutVideos() {
+  const track = document.getElementById("about-video-track");
+
+  if (!track) {
+    return;
+  }
+
+  renderAboutVideoSlider(getFallbackAboutVideos());
+
+  try {
+    const videosRef = collection(db, VIDEOS_COLLECTION);
+    registerSubscription(
+      onSnapshot(
+        videosRef,
+        (snapshot) => {
+          const videos = snapshot.docs.map((docItem) => ({ id: docItem.id, ...docItem.data() }));
+          renderAboutVideoSlider(videos);
+        },
+        (error) => {
+          console.error("[BOTD] Failed to load about videos", error);
+          renderAboutVideoSlider(getFallbackAboutVideos());
+        }
+      )
+    );
+  } catch (error) {
+    console.error("[BOTD] About video listener failed", error);
+    renderAboutVideoSlider(getFallbackAboutVideos());
+  }
+}
+
 function applyEventsContent(content) {
   if (!content) {
     return;
@@ -422,7 +708,10 @@ function setUiControlsState(settings = {}) {
   liveUiControls = {
     showVotes: Boolean(settings?.showVotes),
     showLeaderboard: settings?.showLeaderboard !== false,
+    registrationOpen: settings?.registrationOpen !== false,
+    registrationClosedMessage: String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL"),
   };
+  registrationPortalController?.applyAvailability?.(liveUiControls);
   renderVotingShell();
   renderLeaderboard();
 }
@@ -439,6 +728,10 @@ function getVoteCountForTeam(teamId) {
 
   const fallbackTeam = liveVotingTeams.find((team) => team.id === teamId);
   return Number(fallbackTeam?.votes || 0);
+}
+
+function isPublicContestant(team) {
+  return team?.approved !== false && team?.visible !== false;
 }
 
 function animateCountValue(target, teamId, nextValue) {
@@ -550,7 +843,7 @@ function renderLeaderboard() {
 
   const groupedTeams = LEADERBOARD_CATEGORY_ORDER.map((category) => {
     const teams = liveVotingTeams
-      .filter((team) => team.isVisible !== false)
+      .filter(isPublicContestant)
       .filter((team) => normalizeLeaderboardCategory(team.categoryId) === category.id)
       .sort((left, right) => {
         const voteDifference = getVoteCountForTeam(right.id) - getVoteCountForTeam(left.id);
@@ -630,15 +923,15 @@ function initializeAdminConsole() {
   window.botdAdmin = {
     async setVoteVisibility(showVotes) {
       await setVoteVisibility(showVotes);
-      console.log(`[BOTD Admin] Vote visibility set to ${Boolean(showVotes)}`);
+      console.log(`[BOTD Controls] Vote visibility set to ${Boolean(showVotes)}`);
     },
     async setLeaderboardVisibility(showLeaderboard) {
       await setLeaderboardVisibility(showLeaderboard);
-      console.log(`[BOTD Admin] Leaderboard visibility set to ${Boolean(showLeaderboard)}`);
+      console.log(`[BOTD Controls] Leaderboard visibility set to ${Boolean(showLeaderboard)}`);
     },
     async triggerPartyBlast() {
       await triggerPartyBlast();
-      console.log("[BOTD Admin] Party blast triggered");
+      console.log("[BOTD Controls] Party blast triggered");
     },
     async registrations() {
       const items = await fetchRegistrations();
@@ -741,21 +1034,24 @@ function writeCachedPayload(scope, key, data) {
 function subscribeToCollection(collectionName, onData) {
   try {
     const cached = readCachedPayload("collection", collectionName);
-if (cached) {
-  console.log("⚡ Loaded from cache:", collectionName);
-  onData(cached);
-}
+    if (cached) {
+      console.log("Loaded cached collection:", collectionName);
+      onData(cached);
+    }
 
-    getDocs(collection(db, collectionName))
-      .then((snapshot) => {
+    registerSubscription(
+      onSnapshot(
+        collection(db, collectionName),
+        (snapshot) => {
         const items = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
         writeCachedPayload("collection", collectionName, items);
         onData(items);
-      })
-      .catch((error) => {
-        console.error(`Failed to prime collection ${collectionName}`, error);
-      });
-
+        },
+        (error) => {
+          console.error(`Failed to subscribe to collection ${collectionName}`, error);
+        }
+      )
+    );
   } catch (error) {
     console.error(`Failed to subscribe to collection ${collectionName}`, error);
   }
@@ -800,13 +1096,13 @@ function renderSeasonContestants() {
     <div class="tab-list" role="tablist" aria-label="Contestant categories">
       ${activeCategories.map((category, index) => {
         const code = String(category.code || "").toUpperCase();
-        const count = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && team.isVisible !== false).length;
+        const count = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && isPublicContestant(team)).length;
         return `<button class="tab-button ${index === 0 ? "is-active" : ""}" type="button" role="tab" aria-selected="${index === 0}" data-tab-target="${code.toLowerCase()}">${category.name || code} (${count})</button>`;
       }).join("")}
     </div>
     ${activeCategories.map((category, index) => {
       const code = String(category.code || "").toUpperCase();
-      const teams = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && team.isVisible !== false);
+      const teams = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && isPublicContestant(team));
       return `
         <div class="tab-panel ${code === activeCode && index === 0 ? "is-active" : ""}" id="${code.toLowerCase()}" role="tabpanel">
           <p class="contestant-meta">${teams.length ? `${teams.length} contestants available in ${category.name || code}.` : "Contestants will be announcing soon."}</p>
@@ -932,58 +1228,85 @@ function loadJudgesRealtime() {
 
 function renderSponsors(items = []) {
   const host = document.getElementById("sponsors-live-list");
+  const featuredHost = document.getElementById("sponsor-featured-banner");
+
+  if (!host && !featuredHost) {
+    return;
+  }
+
+  const visibleItems = items
+    .filter((item) => item.recordType !== "lead")
+    .filter((item) => (item.isVisible ?? item.visible) !== false)
+    .sort((left, right) => Number(left.order ?? left.sortOrder ?? 0) - Number(right.order ?? right.sortOrder ?? 0));
+
+  const featuredSponsor = visibleItems.find((item) => String(item.name || "").toLowerCase().includes("bee infinity"))
+    || visibleItems[0]
+    || null;
+  const gridSponsors = visibleItems.filter((item) => item.id !== featuredSponsor?.id);
+
+  if (featuredHost) {
+    if (featuredSponsor) {
+      const name = "BEE INFINITY GROUPS";
+      const logo = "assets/images/sponsors/bie.jpg";
+      const website = featuredSponsor.website || featuredSponsor.link || "";
+      const logoMarkup = `<img src="${logo}" alt="Bee Infinity Groups logo" loading="lazy" decoding="async">`;
+
+      featuredHost.innerHTML = `
+        <div class="presented-banner reveal is-visible">
+          <div class="presented-banner-copy">
+            <p class="sponsor-tier-label">Presented By</p>
+            <h2>${name}</h2>
+            <p>The headline partner leading the BOTD experience across digital presence, stage energy, and audience trust.</p>
+          </div>
+          <div class="presented-banner-brand">
+            ${website ? `<a href="${website}" target="_blank" rel="noreferrer" aria-label="Visit ${name} website">${logoMarkup}</a>` : logoMarkup}
+            <span>Presented by Bee Infinity Groups</span>
+          </div>
+        </div>
+      `;
+    } else {
+      featuredHost.innerHTML = "";
+    }
+  }
 
   if (!host) {
     return;
   }
 
-  const visibleItems = items
-    .filter((item) => item.visible !== false)
-    .sort((left, right) => Number(left.sortOrder || 0) - Number(right.sortOrder || 0));
-
-  const slugifySponsorTier = (value) => String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  const grouped = visibleItems.reduce((accumulator, item) => {
-    const key = slugifySponsorTier(item.tier || item.category || "sponsors");
-    if (!accumulator[key]) {
-      accumulator[key] = [];
-    }
-    accumulator[key].push(item);
-    return accumulator;
-  }, {});
-
-  host.innerHTML = SPONSOR_TIER_CONFIG.map((tier, index) => {
-    const tierItems = grouped[tier.key] || [];
-    const familyMarkup = tier.family ? `<p class="sponsor-family-label">${tier.family}</p>` : "";
-
-    return `
-      <section class="sponsor-category ${tier.sectionClass} reveal is-visible ${index % 3 === 1 ? "reveal-delay-1" : index % 3 === 2 ? "reveal-delay-2" : ""}">
-        <div class="sponsor-category-head">
-          ${familyMarkup}
-          <h3>${tier.title}</h3>
-        </div>
-        <div class="sponsor-grid ${tier.gridClass}">
-          ${tierItems.length ? tierItems.map((item) => `
-            <article class="sponsor-logo-card ${tier.cardClass}">
-              ${item.link ? `<a href="${item.link}" target="_blank" rel="noreferrer">` : ""}
-                ${item.image ? `<img src="${item.image}" alt="${item.name}" class="sponsor-logo-image">` : `<div class="sponsor-placeholder sponsor-placeholder-md">${String(item.name || tier.title).slice(0, 3).toUpperCase()}</div>`}
-              ${item.link ? "</a>" : ""}
-              <p>${item.name}</p>
-            </article>
-          `).join("") : `
-            <article class="sponsor-empty-slot">
-              <p>${tier.title} slot available</p>
-            </article>
-          `}
-        </div>
-      </section>
+  if (!gridSponsors.length) {
+    host.innerHTML = `
+      <div class="sponsors-empty-state reveal is-visible">
+        <p class="eyebrow">Sponsor Network</p>
+        <h3>${featuredSponsor ? "More sponsors will be announced soon." : "Sponsors will be announced soon."}</h3>
+        <p>${featuredSponsor ? "Additional partner logos will appear here as collaborations are announced." : "BOTD partner logos will appear here as collaborations are announced."}</p>
+        <a class="button button-primary sponsor-empty-cta" href="#sponsor-form">Want to become a sponsor?</a>
+      </div>
     `;
-  }).join("");
+    return;
+  }
+
+  host.innerHTML = `
+    <div class="dynamic-sponsors-grid">
+      ${gridSponsors.map((item, index) => {
+        const name = item.name || "BOTD Sponsor";
+        const logo = item.logo || item.image || "";
+        const website = item.website || item.link || "";
+        const initials = String(name).split(/\s+/).slice(0, 2).map((part) => part[0] || "").join("").toUpperCase() || "SP";
+        const logoMarkup = logo
+          ? `<img src="${logo}" alt="${name} logo" class="sponsor-logo-image" loading="lazy" decoding="async">`
+          : `<div class="sponsor-placeholder sponsor-placeholder-md">${initials}</div>`;
+
+        return `
+          <article class="dynamic-sponsor-card reveal is-visible" style="--sponsor-delay: ${Math.min(index * 45, 360)}ms">
+            ${website ? `<a class="dynamic-sponsor-link" href="${website}" target="_blank" rel="noreferrer" aria-label="Visit ${name} website">` : '<div class="dynamic-sponsor-link">'}
+              <div class="dynamic-sponsor-logo">${logoMarkup}</div>
+              <p>${name}</p>
+            ${website ? "</a>" : "</div>"}
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
 }
 
 function loadSponsorsRealtime() {
@@ -1118,9 +1441,15 @@ function showPopup({ title, text, primaryText = "Continue", secondaryText = "" }
 function applyTheme(theme) {
   const selectedTheme = theme === "light" ? "light" : "dark";
   body.setAttribute("data-theme", selectedTheme);
+  root.setAttribute("data-theme", selectedTheme);
+  body.classList.toggle("theme-light", selectedTheme === "light");
+  body.classList.toggle("theme-dark", selectedTheme === "dark");
+  root.classList.toggle("theme-light", selectedTheme === "light");
+  root.classList.toggle("theme-dark", selectedTheme === "dark");
 
   if (themeToggle) {
     themeToggle.setAttribute("aria-pressed", String(selectedTheme === "light"));
+    themeToggle.dataset.theme = selectedTheme;
   }
 
   if (themeLabel) {
@@ -1159,6 +1488,27 @@ function toggleMenu() {
   siteNav.classList.toggle("is-open", !isExpanded);
 }
 
+function setupGlobalControls() {
+  if (themeToggle && themeToggle.dataset.bound !== "true") {
+    themeToggle.addEventListener("click", toggleTheme);
+    themeToggle.dataset.bound = "true";
+  }
+
+  if (menuToggle && menuToggle.dataset.bound !== "true") {
+    menuToggle.addEventListener("click", toggleMenu);
+    menuToggle.dataset.bound = "true";
+  }
+
+  document.querySelectorAll(".nav-link").forEach((link) => {
+    if (link.dataset.bound === "true") {
+      return;
+    }
+
+    link.addEventListener("click", closeMenu);
+    link.dataset.bound = "true";
+  });
+}
+
 function setupRevealAnimations() {
   revealItems.forEach((item, index) => {
     if (!item.classList.contains("reveal-delay-1") && !item.classList.contains("reveal-delay-2")) {
@@ -1195,6 +1545,16 @@ function syncScrollEffects() {
     const heroProgress = Math.max(-0.12, Math.min(1, -heroRect.top / Math.max(heroRect.height, 1)));
     hero.style.setProperty("--hero-shift", `${Math.round(heroProgress * 28)}px`);
   }
+
+  cinematicScenes.forEach((scene) => {
+    const sceneRect = scene.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || 1;
+    const sceneProgress = Math.max(
+      -1,
+      Math.min(1, ((viewportHeight * 0.5) - sceneRect.top) / Math.max(sceneRect.height, 1))
+    );
+    scene.style.setProperty("--cinema-shift", `${Math.round(sceneProgress * 34)}px`);
+  });
 
   scrollTicking = false;
 }
@@ -1253,11 +1613,23 @@ function setupAccordions() {
         return;
       }
 
+      const isInitiallyOpen = trigger.getAttribute("aria-expanded") === "true" || panel.classList.contains("is-open");
+      trigger.setAttribute("aria-expanded", String(isInitiallyOpen));
+      item.classList.toggle("is-open", isInitiallyOpen);
+      panel.classList.toggle("is-open", isInitiallyOpen);
+
+      if (trigger.dataset.bound === "true") {
+        return;
+      }
+
       trigger.addEventListener("click", () => {
         const isOpen = trigger.getAttribute("aria-expanded") === "true";
         trigger.setAttribute("aria-expanded", String(!isOpen));
+        item.classList.toggle("is-open", !isOpen);
         panel.classList.toggle("is-open", !isOpen);
       });
+
+      trigger.dataset.bound = "true";
     });
   });
 }
@@ -1409,7 +1781,7 @@ function setupFieldStates(scope = document) {
   });
 }
 
-function setupRegistrationForm() {
+function setupRegistrationFormLegacyDisabled() {
   if (!registrationForm) {
     return;
   }
@@ -1610,8 +1982,9 @@ function setupRegistrationForm() {
       relationship: isMinor ? relationshipInput?.value.trim() || "" : "",
       guardianSignature: isMinor ? guardianSignatureInput?.value.trim() || "" : "",
       paymentEnabled: PAYMENT_ENABLED,
-      paymentStatus: PAYMENT_ENABLED ? "paid" : "disabled",
+      paymentStatus: PAYMENT_ENABLED ? "PENDING" : "DISABLED",
       paymentReference: "",
+      status: "PENDING",
       details: {
         agreementAccepted: Boolean(participantConsentInput?.checked),
         guardianConsentAccepted: Boolean(guardianConsentInput?.checked),
@@ -1686,7 +2059,7 @@ function setupRegistrationForm() {
     } catch (error) {
       console.error("[BOTD] Registration submit failed", error);
       setUploadProgress(0);
-      setStatus(error?.message || "Registration upload failed. Please try again or contact BOTD support.", "is-error");
+      setStatus("Registration could not be completed. Please try again or contact BOTD support.", "is-error");
     }
   }
 
@@ -1721,7 +2094,7 @@ function setupRegistrationForm() {
       name: "Battle Of The Dance",
       description: "First Audition Round Registration",
       async handler(response) {
-        await finalizeSubmission(response.razorpay_payment_id || "demo-success");
+        await finalizeSubmission(response.razorpay_payment_id || "payment-confirmed");
         setButtonLoading(payButton, false, "Pay & Submit");
         syncSubmitState();
       },
@@ -1747,14 +2120,14 @@ function setupRegistrationForm() {
       && !razorpayKey.includes("YOUR_KEY_HERE");
 
     if (typeof window.Razorpay !== "function") {
-      setStatus("Razorpay SDK failed to load. Please refresh and try again.", "is-error");
+      setStatus("Payment window could not open. Please refresh and try again.", "is-error");
       setButtonLoading(payButton, false, "Pay & Submit");
       syncSubmitState();
       return;
     }
 
     if (!hasValidTestKey) {
-      setStatus("Add your Razorpay test key in js/script.js to open the checkout popup.", "is-error");
+      setStatus("Payment setup is not ready. Please contact BOTD support.", "is-error");
       setButtonLoading(payButton, false, "Pay & Submit");
       syncSubmitState();
       return;
@@ -1762,7 +2135,7 @@ function setupRegistrationForm() {
 
     const razorpay = new window.Razorpay(paymentOptions);
     razorpay.on("payment.failed", () => {
-      setStatus("Payment failed. Please try again.", "is-error");
+      setStatus("Payment was not completed. Please try again.", "is-error");
       setButtonLoading(payButton, false, "Pay & Submit");
       syncSubmitState();
     });
@@ -1802,6 +2175,578 @@ function setupRegistrationForm() {
   updateUploadState(audioInput, audioName);
   updateUploadState(photoInput, photoName);
   syncSubmitState();
+}
+
+function setupRegistrationForm() {
+  if (!registrationForm) {
+    return;
+  }
+
+  const PAYMENT_ENABLED = Boolean(CASHFREE_CONFIG.enabled);
+  const defaultClosed = registrationForm.dataset.registrationClosed === "true";
+  const categorySelect = registrationForm.querySelector("#category-select");
+  const ageInput = registrationForm.querySelector('input[name="age"]');
+  const groupFields = registrationForm.querySelector("#group-fields");
+  const guardianSection = registrationForm.querySelector("#guardian-section");
+  const teamNameInput = registrationForm.querySelector('input[name="teamName"]');
+  const memberCountInput = registrationForm.querySelector('input[name="memberCount"]');
+  const parentNameInput = registrationForm.querySelector('input[name="parentName"]');
+  const parentPhoneInput = registrationForm.querySelector('input[name="parentPhone"]');
+  const parentEmailInput = registrationForm.querySelector('input[name="parentEmail"]');
+  const relationshipInput = registrationForm.querySelector('input[name="relationship"]');
+  const guardianConsentInput = registrationForm.querySelector("#guardian-consent");
+  const guardianConsentWrap = registrationForm.querySelector("#guardian-consent-wrap");
+  const guardianSignatureInput = registrationForm.querySelector('input[name="guardianSignature"]');
+  const participantConsentInput = registrationForm.querySelector("#participant-consent");
+  const participantConsentWrap = registrationForm.querySelector("#participant-consent-wrap");
+  const videoInput = registrationForm.querySelector("#video-file");
+  const audioInput = registrationForm.querySelector("#audio-file");
+  const photoInput = registrationForm.querySelector("#photo-files");
+  const videoName = registrationForm.querySelector("#video-file-name");
+  const audioName = registrationForm.querySelector("#audio-file-name");
+  const photoName = registrationForm.querySelector("#photo-file-name");
+  const payButton = registrationForm.querySelector("#pay-submit");
+  const statusMessage = registrationForm.querySelector("#form-status");
+  const successMessage = registrationForm.querySelector("#success-message");
+  const uploadProgress = registrationForm.querySelector("#upload-progress");
+  const uploadProgressBar = registrationForm.querySelector("#upload-progress-bar");
+  const honeypotInput = registrationForm.querySelector('input[name="website"]');
+  const termsCollapseToggle = registrationForm.querySelector("#terms-collapse-toggle");
+  const termsEmbedCopy = registrationForm.querySelector("#terms-embed-copy");
+  const disabledBanner = document.getElementById("registration-disabled-banner");
+  const disabledTitle = document.getElementById("registration-disabled-title");
+  const disabledCopy = document.getElementById("registration-disabled-copy");
+  const heroStatus = document.getElementById("registration-hero-status");
+  const heroCopy = document.getElementById("registration-hero-copy") || document.querySelector(".register-hero-highlight p");
+  const allControls = Array.from(registrationForm.querySelectorAll("input, select, textarea, button"));
+  let registrationOpen = !defaultClosed;
+
+  function setStatus(message, tone) {
+    if (!statusMessage) {
+      return;
+    }
+
+    statusMessage.textContent = message;
+    statusMessage.classList.remove("is-error", "is-success");
+    if (tone) {
+      statusMessage.classList.add(tone);
+    }
+  }
+
+  function setUploadProgress(value) {
+    if (!uploadProgress || !uploadProgressBar) {
+      return;
+    }
+
+    const percent = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+    uploadProgress.classList.toggle("is-hidden", percent <= 0 || percent >= 100);
+    uploadProgress.setAttribute("aria-hidden", percent <= 0 || percent >= 100 ? "true" : "false");
+    uploadProgressBar.style.width = `${percent}%`;
+  }
+
+  function checkMinor() {
+    const age = Number(ageInput?.value || 0);
+    return age > 0 && age < 18;
+  }
+
+  function updateUploadState(input, label, forceValidate = false) {
+    if (!input || !label) {
+      return;
+    }
+
+    const wrapper = input.closest(".upload-field");
+    const fileCount = Number(input.files?.length || 0);
+    const hasFile = fileCount > 0;
+    const validationMessage = getUploadValidationMessage(input);
+    label.textContent = hasFile
+      ? (fileCount === 1 ? input.files[0].name : `${fileCount} files selected`)
+      : "No file selected";
+    wrapper?.classList.toggle("is-success", hasFile && !validationMessage);
+    wrapper?.classList.toggle("is-error", Boolean(forceValidate || input.required) && Boolean(validationMessage));
+    input.setCustomValidity(validationMessage);
+  }
+
+  function getUploadValidationMessage(input) {
+    if (!input?.required && !input?.files?.length) {
+      return "";
+    }
+
+    const file = input?.files?.[0] || null;
+    if (!file) {
+      return "This upload is required.";
+    }
+
+    const fileName = String(file.name || "").toLowerCase();
+    const fileType = String(file.type || "").toLowerCase();
+
+    if (input === videoInput && fileType !== "video/mp4" && !fileName.endsWith(".mp4")) {
+      return "Upload a valid MP4 video file.";
+    }
+
+    if (input === audioInput && !["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"].includes(fileType) && !/\.(mp3|wav)$/.test(fileName)) {
+      return "Upload a valid MP3 or WAV audio file.";
+    }
+
+    if (input === photoInput && !fileType.startsWith("image/")) {
+      return "Upload a valid display photo.";
+    }
+
+    return "";
+  }
+
+  function validateRequiredUploads(forceValidate = false) {
+    const uploadEntries = [
+      [videoInput, videoName],
+      [audioInput, audioName],
+      [photoInput, photoName],
+    ];
+
+    uploadEntries.forEach(([input, label]) => updateUploadState(input, label, forceValidate));
+    return uploadEntries.every(([input]) => !getUploadValidationMessage(input));
+  }
+
+  function syncTermsCollapse(forceExpanded) {
+    if (!termsCollapseToggle || !termsEmbedCopy) {
+      return;
+    }
+
+    const shouldExpand = typeof forceExpanded === "boolean"
+      ? forceExpanded
+      : termsCollapseToggle.getAttribute("aria-expanded") !== "true";
+
+    termsCollapseToggle.setAttribute("aria-expanded", String(shouldExpand));
+    termsEmbedCopy.classList.toggle("is-collapsed", !shouldExpand);
+  }
+
+  function syncConsentState() {
+    participantConsentWrap?.classList.toggle("is-error", !participantConsentInput?.checked);
+    participantConsentWrap?.classList.toggle("is-success", Boolean(participantConsentInput?.checked));
+
+    const isMinor = checkMinor();
+    guardianConsentWrap?.classList.toggle("is-error", isMinor && !guardianConsentInput?.checked);
+    guardianConsentWrap?.classList.toggle("is-success", !isMinor || Boolean(guardianConsentInput?.checked));
+  }
+
+  function syncGroupFields() {
+    const isGroupCategory = categorySelect && /Group/i.test(categorySelect.value);
+    groupFields?.classList.toggle("is-hidden", !isGroupCategory);
+
+    [teamNameInput, memberCountInput].forEach((control) => {
+      if (!control) {
+        return;
+      }
+
+      control.required = Boolean(isGroupCategory);
+      if (!isGroupCategory) {
+        control.value = "";
+        control.closest(".field")?.classList.remove("is-filled", "is-error", "is-success");
+      }
+    });
+  }
+
+  function syncGuardianFields() {
+    const isMinor = checkMinor();
+    guardianSection?.classList.toggle("is-hidden", !isMinor);
+
+    [parentNameInput, parentPhoneInput, parentEmailInput, relationshipInput, guardianSignatureInput].forEach((control) => {
+      if (!control) {
+        return;
+      }
+
+      control.required = isMinor;
+      if (!isMinor) {
+        control.value = "";
+        control.closest(".field")?.classList.remove("is-filled", "is-error", "is-success");
+      }
+    });
+
+    if (guardianConsentInput && !isMinor) {
+      guardianConsentInput.checked = false;
+    }
+  }
+
+  function isFormReady() {
+    if (!registrationOpen) {
+      return false;
+    }
+
+    if (!registrationForm.checkValidity()) {
+      return false;
+    }
+
+    if (!validateRequiredUploads()) {
+      return false;
+    }
+
+    if (!participantConsentInput?.checked) {
+      return false;
+    }
+
+    if (!checkMinor()) {
+      return true;
+    }
+
+    return Boolean(guardianConsentInput?.checked) && Boolean(guardianSignatureInput?.value.trim());
+  }
+
+  function syncSubmitState() {
+    if (payButton && !payButton.classList.contains("is-loading")) {
+      payButton.disabled = !isFormReady();
+    }
+  }
+
+  function applyRegistrationAvailability(settings = {}) {
+    registrationOpen = settings?.registrationOpen !== false;
+    const closedMessage = String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL");
+
+    registrationForm.classList.toggle("is-disabled", !registrationOpen);
+    registrationForm.dataset.registrationClosed = registrationOpen ? "false" : "true";
+
+    if (disabledBanner) {
+      disabledBanner.hidden = registrationOpen;
+    }
+
+    allControls.forEach((control) => {
+      control.disabled = !registrationOpen;
+    });
+
+    if (heroStatus) {
+      heroStatus.textContent = registrationOpen ? "REGISTRATION IS LIVE" : closedMessage;
+    }
+
+    if (heroCopy) {
+      heroCopy.textContent = registrationOpen
+        ? "Complete your form, upload your media, and continue to secure checkout."
+        : "Registrations are temporarily disabled on the website until auditions officially open.";
+    }
+
+    if (disabledTitle) {
+      disabledTitle.textContent = registrationOpen ? "Registration is live" : closedMessage.replace("OPEN", "Open");
+    }
+
+    if (disabledCopy) {
+      disabledCopy.textContent = registrationOpen
+        ? "The portal is now active."
+        : "The form is temporarily disabled right now. Once registration opens, media upload and submission will be enabled again from this same page.";
+    }
+
+    if (!registrationOpen) {
+      successMessage?.classList.add("is-hidden");
+      setUploadProgress(0);
+      setStatus("Registration is currently disabled.", "");
+    } else if (!statusMessage?.textContent || statusMessage.textContent.includes("currently disabled")) {
+      setStatus("Registration is open. Complete the form to continue.", "");
+    }
+
+    syncSubmitState();
+  }
+
+  function validateForm() {
+    if (!registrationOpen) {
+      return { valid: false, message: "Registration is currently disabled." };
+    }
+
+    if (!registrationForm.reportValidity()) {
+      return { valid: false, message: "Please complete all required fields before continuing." };
+    }
+
+    if (!validateRequiredUploads(true)) {
+      return { valid: false, message: "Upload your video, audio track, and display picture before continuing." };
+    }
+
+    if (!participantConsentInput?.checked) {
+      syncTermsCollapse(true);
+      return { valid: false, message: "Please accept the BOTD legal consent clauses before continuing." };
+    }
+
+    if (checkMinor()) {
+      if (!guardianConsentInput?.checked) {
+        return { valid: false, message: "Parent or legal guardian consent is required for minors." };
+      }
+
+      if (!guardianSignatureInput?.value.trim()) {
+        return { valid: false, message: "Parent or legal guardian digital signature is required for minors." };
+      }
+    }
+
+    return { valid: true };
+  }
+
+  function collectFormData() {
+    const termsText = termsEmbedCopy
+      ? Array.from(termsEmbedCopy.querySelectorAll("p")).map((item) => item.textContent.trim()).join(" ")
+      : "";
+    const isMinor = checkMinor();
+
+    return {
+      name: registrationForm.fullName.value.trim(),
+      phone: sanitizePhoneDigits(registrationForm.phone.value.trim()).slice(0, 10),
+      email: registrationForm.email.value.trim(),
+      isMinor,
+      teamName: registrationForm.teamName.value.trim() || registrationForm.fullName.value.trim(),
+      danceStyle: registrationForm.danceStyle.value,
+      city: registrationForm.city.value.trim(),
+      age: registrationForm.age.value.trim(),
+      category: registrationForm.category.value,
+      memberCount: registrationForm.memberCount.value.trim(),
+      discoverySource: registrationForm.discoverySource.value,
+      digitalSignature: registrationForm.digitalSignature.value.trim(),
+      signatureType: "typed",
+      signedAt: new Date().toISOString(),
+      parentName: isMinor ? parentNameInput?.value.trim() || "" : "",
+      parentPhone: isMinor ? sanitizePhoneDigits(parentPhoneInput?.value.trim() || "").slice(0, 10) : "",
+      parentEmail: isMinor ? parentEmailInput?.value.trim() || "" : "",
+      relationship: isMinor ? relationshipInput?.value.trim() || "" : "",
+      guardianSignature: isMinor ? guardianSignatureInput?.value.trim() || "" : "",
+      paymentEnabled: PAYMENT_ENABLED,
+      paymentStatus: PAYMENT_ENABLED ? "PENDING" : "DISABLED",
+      paymentReference: "",
+      status: "PENDING",
+      details: {
+        agreementAccepted: Boolean(participantConsentInput?.checked),
+        guardianConsentAccepted: Boolean(guardianConsentInput?.checked),
+        digitalSignature: registrationForm.digitalSignature.value.trim(),
+        guardianSignature: guardianSignatureInput?.value.trim() || "",
+        termsAcceptedText: termsText,
+        paymentAmount: CASHFREE_CONFIG.amount,
+        paymentCurrency: CASHFREE_CONFIG.currency,
+        paymentReference: "",
+        paymentStatus: PAYMENT_ENABLED ? "PENDING" : "DISABLED",
+        paymentGateway: "cashfree",
+        optionalUploads: {
+          videoFileName: videoInput?.files?.[0]?.name || "",
+          audioFileName: audioInput?.files?.[0]?.name || "",
+          photoFileNames: Array.from(photoInput?.files || []).map((file) => file.name),
+        },
+      },
+      files: {
+        video: videoInput?.files?.[0] || null,
+        audio: audioInput?.files?.[0] || null,
+        photos: Array.from(photoInput?.files || []),
+        documents: [],
+      },
+    };
+  }
+
+  async function finalizeSubmission(paymentReference) {
+    const payload = collectFormData();
+    const paymentResult = typeof paymentReference === "object" && paymentReference !== null
+      ? paymentReference
+      : { orderId: paymentReference, paymentId: "", orderStatus: PAYMENT_ENABLED ? "PAID" : "DISABLED" };
+    const paymentDetails = {
+      gateway: "cashfree",
+      orderId: paymentResult.orderId || "",
+      cfOrderId: paymentResult.cfOrderId || "",
+      paymentId: paymentResult.paymentId || paymentResult.cfPaymentId || "",
+      status: PAYMENT_ENABLED ? "SUCCESS" : "DISABLED",
+      orderStatus: paymentResult.orderStatus || (PAYMENT_ENABLED ? "PAID" : "DISABLED"),
+      amount: Number(paymentResult.amount || CASHFREE_CONFIG.amount || 0),
+      currency: paymentResult.currency || CASHFREE_CONFIG.currency || "INR",
+      timestamp: paymentResult.paymentTime || paymentResult.timestamp || new Date().toISOString(),
+      raw: paymentResult.paymentDetails || null,
+    };
+    payload.details.paymentReference = paymentDetails.paymentId || paymentDetails.orderId || "payment-disabled";
+    payload.details.paymentStatus = paymentDetails.status;
+    payload.details.paymentDetails = paymentDetails;
+    payload.paymentReference = payload.details.paymentReference;
+    payload.paymentStatus = paymentDetails.status;
+    payload.paymentDetails = paymentDetails;
+    payload.status = "SUCCESS";
+    payload.onProgress = (progress) => {
+      setUploadProgress(progress);
+      setStatus(progress > 0 ? `Uploading files... ${progress}%` : "Preparing your registration PDF...", "");
+      if (progress > 0 && progress < 100) {
+        setButtonLoading(payButton, true, `Uploading ${progress}%`);
+      }
+    };
+
+    try {
+      const result = await submitRegistration(payload);
+      console.log("[BOTD] Registration saved to Firestore and Storage", {
+        registrationId: result.id,
+        folderName: result.folderName,
+        pdfUrl: result.pdfAsset?.url || "",
+        uploadSummary: result.uploadedFiles,
+      });
+
+      setUploadProgress(100);
+      successMessage?.classList.remove("is-hidden");
+      setStatus("Payment successful. Your consent form and uploads were saved.", "is-success");
+      registrationForm.reset();
+      registrationForm.querySelectorAll(".field").forEach((field) => field.classList.remove("is-filled", "is-success", "is-error"));
+      syncGroupFields();
+      syncGuardianFields();
+      updateUploadState(videoInput, videoName);
+      updateUploadState(audioInput, audioName);
+      updateUploadState(photoInput, photoName);
+      syncTermsCollapse(false);
+      syncConsentState();
+      setButtonLoading(payButton, false, "Register & Continue Payment");
+      syncSubmitState();
+
+      const shouldDownloadPdf = await showPopup({
+        title: "Registration Successful",
+        text: "All the Best for BOTD!",
+        primaryText: result.pdfAsset?.url ? "Download PDF" : "Continue",
+        secondaryText: result.pdfAsset?.url ? "Close" : "",
+      });
+
+      if (shouldDownloadPdf && result.pdfAsset?.url) {
+        window.open(result.pdfAsset.url, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      console.error("[BOTD] Registration submit failed", error);
+      setUploadProgress(0);
+      setStatus("Registration could not be completed. Please try again or contact BOTD support.", "is-error");
+      setButtonLoading(payButton, false, "Register & Continue Payment");
+      syncSubmitState();
+    }
+  }
+
+  async function verifyCashfreeOrderWithRetry(orderId, attempts = 4) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        return await verifyCashfreeOrder(orderId);
+      } catch (error) {
+        lastError = error;
+        if (attempt < attempts - 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, 1200));
+        }
+      }
+    }
+
+    throw lastError || new Error("Payment confirmation could not be completed.");
+  }
+
+  async function startPayment() {
+    registrationForm.querySelectorAll(".field").forEach((field) => markFieldValidity(field, true));
+    validateRequiredUploads(true);
+    syncConsentState();
+
+    const validation = validateForm();
+    if (!validation.valid) {
+      setStatus(validation.message, "is-error");
+      syncSubmitState();
+      return;
+    }
+
+    if (honeypotInput?.value.trim()) {
+      setStatus("Unable to submit right now.", "is-error");
+      syncSubmitState();
+      return;
+    }
+
+    successMessage?.classList.add("is-hidden");
+    setStatus(PAYMENT_ENABLED ? "Preparing secure checkout..." : "Submitting your registration...", "");
+    setButtonLoading(payButton, true, PAYMENT_ENABLED ? "Processing" : "Submitting");
+
+    if (!PAYMENT_ENABLED) {
+      await finalizeSubmission("payment-disabled");
+      return;
+    }
+
+    let cashfreeConfig;
+    let orderContext;
+
+    try {
+      cashfreeConfig = await loadCashfreeConfig();
+      orderContext = await createCashfreeOrder(collectFormData());
+    } catch (error) {
+      console.error("[BOTD] Cashfree bootstrap failed", error);
+      setStatus("Payment could not start. Please try again.", "is-error");
+      setButtonLoading(payButton, false, "Register & Continue Payment");
+      syncSubmitState();
+      return;
+    }
+
+    if (typeof window.Cashfree !== "function") {
+      setStatus("Payment window could not open. Please refresh and try again.", "is-error");
+      setButtonLoading(payButton, false, "Register & Continue Payment");
+      syncSubmitState();
+      return;
+    }
+
+    try {
+      const cashfree = window.Cashfree({
+        mode: cashfreeConfig.mode || "sandbox",
+      });
+
+      const checkoutResult = await cashfree.checkout({
+        paymentSessionId: orderContext.paymentSessionId,
+        redirectTarget: "_modal",
+      });
+
+      if (checkoutResult?.error) {
+        throw new Error("Payment was not completed.");
+      }
+
+      setStatus("Verifying payment...", "");
+      const verification = await verifyCashfreeOrderWithRetry(orderContext.orderId);
+      await finalizeSubmission({
+        ...orderContext,
+        ...verification,
+        amount: verification.amount || orderContext.amount,
+        currency: verification.currency || orderContext.currency,
+      });
+    } catch (error) {
+      console.error("[BOTD] Cashfree checkout failed", error);
+      setStatus("Payment was not completed. Please try again.", "is-error");
+      setButtonLoading(payButton, false, "Register & Continue Payment");
+      syncSubmitState();
+      await showPopup({
+        title: "Payment Failed",
+        text: "Payment was not completed. Please try again.",
+        primaryText: "Try Again",
+      });
+    }
+  }
+
+  registrationPortalController = {
+    applyAvailability(settings = {}) {
+      applyRegistrationAvailability({
+        registrationOpen: settings?.registrationOpen !== false,
+        registrationClosedMessage: String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL"),
+      });
+    },
+  };
+
+  registrationForm.addEventListener("input", syncSubmitState);
+  registrationForm.addEventListener("change", () => {
+    syncConsentState();
+    syncSubmitState();
+  });
+  ageInput?.addEventListener("input", () => {
+    syncGuardianFields();
+    syncSubmitState();
+  });
+  categorySelect?.addEventListener("change", () => {
+    syncGroupFields();
+    syncSubmitState();
+  });
+  videoInput?.addEventListener("change", () => updateUploadState(videoInput, videoName, true));
+  audioInput?.addEventListener("change", () => updateUploadState(audioInput, audioName, true));
+  photoInput?.addEventListener("change", () => updateUploadState(photoInput, photoName, true));
+  participantConsentInput?.addEventListener("change", syncConsentState);
+  guardianConsentInput?.addEventListener("change", syncConsentState);
+  termsCollapseToggle?.addEventListener("click", () => syncTermsCollapse());
+  payButton?.addEventListener("click", startPayment);
+
+  const paymentLabel = payButton?.querySelector(".payment-button-text");
+  if (paymentLabel) {
+    paymentLabel.textContent = "Register & Continue Payment";
+  }
+
+  syncGroupFields();
+  syncGuardianFields();
+  syncTermsCollapse(false);
+  validateRequiredUploads();
+  syncConsentState();
+  applyRegistrationAvailability({
+    registrationOpen: liveUiControls.registrationOpen,
+    registrationClosedMessage: liveUiControls.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL",
+  });
 }
 
 function setVoteStatus(message, tone) {
@@ -1863,18 +2808,18 @@ function getFriendlyPhoneAuthMessage(error) {
   }
 
   if (errorCode.includes("captcha-check-failed")) {
-    return "reCAPTCHA verification failed. Please try again.";
+    return "Security check could not be completed. Please try again.";
   }
 
   if (errorCode.includes("billing-not-enabled")) {
-    return "Firebase billing is not enabled for phone OTP.";
+    return "OTP service is not ready right now. Please contact BOTD support.";
   }
 
   if (errorCode.includes("operation-not-allowed")) {
-    return "Phone OTP sign-in is not enabled in Firebase.";
+    return "OTP service is not ready right now. Please contact BOTD support.";
   }
 
-  return error?.message || "Failed to send OTP. Please try again.";
+  return "OTP could not be sent. Please try again.";
 }
 
 function getFriendlyOtpVerificationMessage(error) {
@@ -1892,7 +2837,7 @@ function getFriendlyOtpVerificationMessage(error) {
     return "Too many attempts. Please wait a moment and try again.";
   }
 
-  return error?.message || "OTP verification failed. Please try again.";
+  return "OTP could not be verified. Please try again.";
 }
 
 function getActiveVotingCategoryCode() {
@@ -1993,7 +2938,7 @@ function renderVotingShell() {
   panelHost.innerHTML = activeCategories.map((category) => {
     const code = String(category.code || "").toUpperCase();
     const isActive = code === activeCode;
-    const teams = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && team.isVisible !== false);
+    const teams = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && isPublicContestant(team));
     return `
       <div class="vote-tab-panel ${isActive ? "is-active" : ""}" id="${code.toLowerCase()}" role="tabpanel">
         <div class="contestant-vote-grid">
@@ -2295,7 +3240,7 @@ function setupSimpleForm({
       } catch (error) {
         console.error(`[BOTD] ${formId} submission failed`, error);
         if (status) {
-          status.textContent = "Submission failed. Please try again.";
+          status.textContent = "Your message could not be submitted. Please try again.";
           status.classList.add("is-error");
         }
       } finally {
@@ -2354,23 +3299,27 @@ function initSite() {
   createPopup();
   prepareMediaLoading();
   initializeAdminConsole();
-  activeUser = getCurrentUser();
-  loadHomeContent();
-  loadVotingContent();
-  loadCategoriesRealtime();
-  loadTeamsRealtime();
-  loadAuthSession();
   loadTheme();
+  setupGlobalControls();
+  syncHeaderState();
   prepareButtons();
   setupFieldStates();
   setupRevealAnimations();
-  syncHeaderState();
   setupAccordions();
   setupTabs();
   setupRegistrationForm();
   setupVotingPage();
   setupSponsorForm();
   setupContactForm();
+  activeUser = getCurrentUser();
+  loadHomeContent();
+  loadVotingContent();
+  loadAboutVideos();
+  loadEventPosters();
+  loadCategoriesRealtime();
+  loadTeamsRealtime();
+  loadAuthSession();
+  loadUiControlSettings();
 
 setTimeout(() => {
   syncScrollEffects();
@@ -2389,17 +3338,8 @@ setTimeout(() => {
 }, 1500);
 setTimeout(() => {
   loadVotingSettings();
-  loadUiControlSettings();
   loadPartyBlastSignals();
 }, 2000);
-
-
-  themeToggle?.addEventListener("click", toggleTheme);
-  menuToggle?.addEventListener("click", toggleMenu);
-
-  document.querySelectorAll(".nav-link").forEach((link) => {
-    link.addEventListener("click", closeMenu);
-  });
 
   window.addEventListener("resize", () => {
     if (window.innerWidth > 820) {
@@ -2429,9 +3369,8 @@ setTimeout(() => {
   }, { once: true });
 }
 
-initSite();
-
-
-
-
-
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initSite, { once: true });
+} else {
+  initSite();
+}

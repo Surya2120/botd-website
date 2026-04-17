@@ -1,12 +1,12 @@
-const PAYMENT_API_BASE = "/api/razorpay";
+const PAYMENT_API_BASE = window.BOTD_CASHFREE_API_BASE || "/api/cashfree";
 
-export const PAYMENT_CONFIG = {
+export const CASHFREE_CONFIG = {
   enabled: true,
-  amountPaise: 9900,
+  amount: 99,
   currency: "INR",
 };
 
-let cachedPaymentConfig = null;
+let cachedCashfreeConfig = null;
 
 async function parseJsonResponse(response, fallbackMessage) {
   let payload = {};
@@ -24,9 +24,9 @@ async function parseJsonResponse(response, fallbackMessage) {
   return payload;
 }
 
-export async function loadRazorpayConfig() {
-  if (cachedPaymentConfig?.keyId) {
-    return cachedPaymentConfig;
+export async function loadCashfreeConfig() {
+  if (cachedCashfreeConfig?.appId) {
+    return cachedCashfreeConfig;
   }
 
   const response = await fetch(`${PAYMENT_API_BASE}/config`, {
@@ -36,22 +36,23 @@ export async function loadRazorpayConfig() {
     },
   });
 
-  const payload = await parseJsonResponse(response, "Unable to load payment configuration.");
+  const payload = await parseJsonResponse(response, "Unable to load Cashfree configuration.");
 
-  if (!payload?.keyId) {
-    throw new Error("Razorpay key ID is missing in backend config.");
+  if (!payload?.appId) {
+    throw new Error("Cashfree app ID is missing in backend config.");
   }
 
-  cachedPaymentConfig = {
-    keyId: payload.keyId,
-    amountPaise: Number(payload.amountPaise || PAYMENT_CONFIG.amountPaise),
-    currency: payload.currency || PAYMENT_CONFIG.currency,
+  cachedCashfreeConfig = {
+    appId: payload.appId,
+    mode: payload.mode || "sandbox",
+    amount: Number(payload.amount || CASHFREE_CONFIG.amount),
+    currency: payload.currency || CASHFREE_CONFIG.currency,
   };
 
-  return cachedPaymentConfig;
+  return cachedCashfreeConfig;
 }
 
-export async function createRazorpayOrder(registrationPayload = {}) {
+export async function createCashfreeOrder(registrationPayload = {}) {
   const response = await fetch(`${PAYMENT_API_BASE}/create-order`, {
     method: "POST",
     headers: {
@@ -59,56 +60,57 @@ export async function createRazorpayOrder(registrationPayload = {}) {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      amountPaise: PAYMENT_CONFIG.amountPaise,
-      currency: PAYMENT_CONFIG.currency,
+      orderAmount: CASHFREE_CONFIG.amount,
+      currency: CASHFREE_CONFIG.currency,
       name: registrationPayload?.name || "",
       email: registrationPayload?.email || "",
       phone: registrationPayload?.phone || "",
     }),
   });
 
-  const payload = await parseJsonResponse(response, "Unable to create Razorpay order.");
+  const payload = await parseJsonResponse(response, "Unable to create Cashfree order.");
 
-  if (!payload?.orderId) {
-    throw new Error("Order ID was not returned by the payment API.");
+  if (!payload?.orderId || !payload?.paymentSessionId) {
+    throw new Error("Cashfree order details were not returned by the payment API.");
   }
 
   return {
     orderId: payload.orderId,
-    amountPaise: Number(payload.amountPaise || PAYMENT_CONFIG.amountPaise),
-    currency: payload.currency || PAYMENT_CONFIG.currency,
-    receipt: payload.receipt || "",
+    cfOrderId: payload.cfOrderId || "",
+    paymentSessionId: payload.paymentSessionId,
+    amount: Number(payload.amount || CASHFREE_CONFIG.amount),
+    currency: payload.currency || CASHFREE_CONFIG.currency,
+    orderStatus: payload.orderStatus || "ACTIVE",
   };
 }
 
-export async function verifyRazorpayPayment(paymentResponse, orderContext = {}, registrationPayload = {}) {
-  const response = await fetch(`${PAYMENT_API_BASE}/verify`, {
+export async function verifyCashfreeOrder(orderId) {
+  const response = await fetch(`${PAYMENT_API_BASE}/verify-order`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
     },
     body: JSON.stringify({
-      razorpay_order_id: paymentResponse?.razorpay_order_id || orderContext?.orderId || "",
-      razorpay_payment_id: paymentResponse?.razorpay_payment_id || "",
-      razorpay_signature: paymentResponse?.razorpay_signature || "",
-      amountPaise: orderContext?.amountPaise || PAYMENT_CONFIG.amountPaise,
-      currency: orderContext?.currency || PAYMENT_CONFIG.currency,
-      name: registrationPayload?.name || "",
-      email: registrationPayload?.email || "",
-      phone: registrationPayload?.phone || "",
+      orderId,
     }),
   });
 
-  const payload = await parseJsonResponse(response, "Payment verification failed.");
+  const payload = await parseJsonResponse(response, "Cashfree order verification failed.");
 
   if (!payload?.success || payload?.verified !== true) {
-    throw new Error(payload?.message || "Payment verification failed.");
+    throw new Error(payload?.message || "Cashfree order verification failed.");
   }
 
   return {
-    paymentId: payload.paymentId || paymentResponse?.razorpay_payment_id || "",
-    orderId: payload.orderId || paymentResponse?.razorpay_order_id || orderContext?.orderId || "",
+    orderId: payload.orderId || orderId,
+    orderStatus: payload.orderStatus || "PAID",
+    cfOrderId: payload.cfOrderId || "",
+    paymentId: payload.paymentId || "",
+    amount: Number(payload.amount || CASHFREE_CONFIG.amount),
+    currency: payload.currency || CASHFREE_CONFIG.currency,
+    paymentTime: payload.paymentTime || "",
+    paymentDetails: payload.paymentDetails || null,
     verified: true,
   };
 }

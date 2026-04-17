@@ -218,6 +218,8 @@ export async function generatePDF(payload) {
     ["How u got to know about BOTD", payload.discoverySource],
     ["Member Count", payload.memberCount],
     ["Payment Status", payload.paymentStatus],
+    ["Payment Order ID", payload.paymentDetails?.orderId || payload.details?.paymentDetails?.orderId],
+    ["Payment ID", payload.paymentDetails?.paymentId || payload.details?.paymentDetails?.paymentId],
     ["Submitted At", new Date().toLocaleString()],
   ];
 
@@ -390,6 +392,36 @@ export async function generatePDF(payload) {
     doc.setTextColor(112, 112, 112);
     doc.text(`Parent / Guardian signature`, marginLeft + 16, cursorY + 114);
   }
+
+  cursorY += signBlockHeight + 14;
+
+  const paymentDetails = payload.paymentDetails || payload.details?.paymentDetails || {};
+  const paymentLines = [
+    `Gateway: ${normalizeValue(paymentDetails.gateway || "cashfree")}`,
+    `Status: ${normalizeValue(paymentDetails.status || payload.paymentStatus)}`,
+    `Order ID: ${normalizeValue(paymentDetails.orderId || payload.paymentReference)}`,
+    `Payment ID: ${normalizeValue(paymentDetails.paymentId)}`,
+    `Amount: ${normalizeValue(paymentDetails.amount ? `${paymentDetails.currency || "INR"} ${paymentDetails.amount}` : "")}`,
+    `Timestamp: ${normalizeValue(paymentDetails.timestamp)}`,
+  ];
+  const paymentBlockHeight = 52 + (paymentLines.length * 14);
+
+  if (cursorY + paymentBlockHeight > pageHeight - 54) {
+    doc.addPage();
+    cursorY = 52;
+  }
+
+  doc.setDrawColor(215, 189, 132);
+  doc.setFillColor(255, 252, 246);
+  doc.roundedRect(marginLeft, cursorY, contentWidth, paymentBlockHeight, 14, 14, "FD");
+  doc.setTextColor(112, 112, 112);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("PAYMENT DETAILS", marginLeft + 16, cursorY + 20);
+  doc.setTextColor(28, 28, 28);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text(paymentLines, marginLeft + 16, cursorY + 44);
 
   return doc.output("blob");
 }
@@ -628,7 +660,8 @@ export async function submitRegistration(payload) {
       guardianSignature: payload.guardianSignature || "",
       paymentStatus: payload.paymentStatus || "disabled",
       paymentReference: payload.paymentReference || "",
-      status: "pending",
+      paymentDetails: payload.paymentDetails || payload.details?.paymentDetails || {},
+      status: payload.status || (payload.paymentStatus === "SUCCESS" ? "SUCCESS" : "pending"),
       submissionStatus: "complete",
       seasonKey: "season_1",
       folderName,

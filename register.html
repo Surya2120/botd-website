@@ -64,7 +64,8 @@
           <div class="register-hero-panel reveal reveal-delay-1">
             <div class="register-hero-highlight">
               <span class="register-highlight-label">Registration Access</span>
-              <strong>AUDITIONS OPENS ON 20th APRIL</strong>
+              <strong id="registration-hero-status">AUDITIONS OPEN ON 20th APRIL</strong>
+              <p id="registration-hero-copy">Registrations are temporarily disabled on the website until auditions officially open.</p>
               <p>Registrations will open on 20th April, Entry Fee: ₹99 (Applicable upon registration)</p>
               <p>This is a skill-based dance competition platform. No gambling or betting involved.</p>
             </div>
@@ -152,11 +153,11 @@
                   </div>
                   <div class="trust-point">
                     <span>02</span>
-                    <p>Temporary save after successful payment</p>
+                    <p>Confirmation after successful payment</p>
                   </div>
                   <div class="trust-point">
                     <span>03</span>
-                    <p>Easy to upgrade to a live backend later</p>
+                    <p>Secure BOTD audition record created after submission</p>
                   </div>
                 </div>
               </div>
@@ -169,14 +170,14 @@
                   <h2>Submit your audition</h2>
                 </div>
 
-                <div class="registration-disabled-banner" role="status" aria-live="polite">
+                <div class="registration-disabled-banner" id="registration-disabled-banner" role="status" aria-live="polite" hidden>
                   <p class="eyebrow">Registration Closed</p>
-                  <h3>Auditions open on 17th April</h3>
-                  <p>The form is temporarily disabled right now. Once registration opens, media upload and submission will be enabled again from this same page.</p>
+                  <h3 id="registration-disabled-title">Auditions open on 20th April</h3>
+                  <p id="registration-disabled-copy">The form is temporarily disabled right now. Once registration opens, media upload and submission will be enabled again from this same page.</p>
                 </div>
 
                 
-                    <form id="registration-form" class="registration-form is-disabled" data-registration-closed="true" novalidate>  
+                    <form id="registration-form" class="registration-form" data-registration-closed="false" novalidate>  
                   <div class="visually-hidden" aria-hidden="true">
                     <label>Leave this empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
                   </div>
@@ -303,7 +304,7 @@
                       </label>
                       <label class="field">
                         <span>Relationship</span>
-                        <input type="text" name="relationship" placeholder="Example: Mother / Father / Guardian">
+                        <input type="text" name="relationship" placeholder="Mother / Father / Guardian">
                       </label>
                     </div>
                     <label class="consent-check" id="guardian-consent-wrap">
@@ -349,7 +350,7 @@
                       <strong class="payment-value">Continue to complete</strong>
                     </div>
                     <button type="button" class="button button-primary payment-button" id="pay-submit">  
-                      <span class="payment-button-text">Register &amp; Continue</span>
+                      <span class="payment-button-text">Register &amp; Continue Payment</span>
                     </button>
                   </div>
                     <p>Payment is required to complete registration. No hidden charges.</p>
@@ -403,9 +404,9 @@
         <div>
           <h3>Social</h3>
           <div class="footer-links">
-            <a href="https://instagram.com/botd.in" aria-label="Instagram placeholder">Instagram</a>
-            <a href="https://youtube.com/@botd_in" aria-label="YouTube placeholder">YouTube</a>
-            <a href="https://www.facebook.com/share/17BytZTPC9" aria-label="Facebook placeholder">Facebook</a>
+            <a href="https://instagram.com/botd.in" aria-label="BOTD Instagram">Instagram</a>
+            <a href="https://youtube.com/@botd_in" aria-label="BOTD YouTube">YouTube</a>
+            <a href="https://www.facebook.com/share/17BytZTPC9" aria-label="BOTD Facebook">Facebook</a>
           </div>
         </div>
       </div>
@@ -415,75 +416,8 @@
 
 
 
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
   <script type="module" src="js/script.js"></script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const form = document.getElementById("registration-form");
-  if (!form) return;
-
-  const isClosed = form.getAttribute("data-registration-closed") === "true";
-
-  if (isClosed) {
-    // Disable all inputs
-    const elements = form.querySelectorAll("input, textarea, select, button");
-    elements.forEach(el => {
-      el.disabled = true;
-    });
-
-    // Visual disabled look
-    form.style.opacity = "0.7";
-    form.style.pointerEvents = "none";
-
-    // Block submit
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      alert("Registrations will open on 20th April.");
-      return false;
-    });
-
-    // 🔥 HIGHLIGHT EFFECT
-    form.addEventListener("mouseenter", function () {
-form.style.boxShadow = "0 0 30px rgba(255, 215, 0, 0.9)";
-      form.style.transition = "0.3s";
-    });
-
-    form.addEventListener("mouseleave", function () {
-      form.style.boxShadow = "none";
-    });
-
-    // 🔥 TOOLTIP
-    const tooltip = document.createElement("div");
-    tooltip.innerText = "Registrations open on 20th April";
-    tooltip.style.position = "fixed";
-    tooltip.style.background = "#111";
-    tooltip.style.color = "#FFD700";
-    tooltip.style.padding = "6px 10px";
-    tooltip.style.fontSize = "12px";
-    tooltip.style.borderRadius = "6px";
-    tooltip.style.pointerEvents = "none";
-    tooltip.style.opacity = "0";
-    tooltip.style.transition = "0.2s";
-    tooltip.style.zIndex = "9999";
-
-    document.body.appendChild(tooltip);
-
-    document.addEventListener("mousemove", function (e) {
-      tooltip.style.left = (e.clientX + 10) + "px";
-      tooltip.style.top = (e.clientY + 10) + "px";
-      tooltip.style.opacity = "1";
-    });
-
-    document.addEventListener("mouseleave", function () {
-      tooltip.style.opacity = "0";
-    });
-  }
-});
-</script>
-
 
 </body>
 </html>
-
-

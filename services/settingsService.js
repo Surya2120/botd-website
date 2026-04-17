@@ -42,6 +42,8 @@ export async function ensureSettingsDocument() {
     {
       showVotes: false,
       showLeaderboard: true,
+      registrationOpen: true,
+      registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
       updatedAt: serverTimestamp(),
     },
     { merge: true }
@@ -61,7 +63,12 @@ export function subscribeUiControls(onData, onError) {
   return onSnapshot(
     doc(db, "settings", "uiControls"),
     (snap) => {
-      onData(snap.exists() ? snap.data() : { showVotes: false, showLeaderboard: true });
+      onData(snap.exists() ? snap.data() : {
+        showVotes: false,
+        showLeaderboard: true,
+        registrationOpen: true,
+        registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
+      });
     },
     onError
   );
@@ -80,7 +87,12 @@ export async function updateUiControls(partialControls = {}) {
 
 export function subscribeVoteVisibility(onData, onError) {
   return subscribeUiControls(
-    (data) => onData({ showVotes: Boolean(data?.showVotes), showLeaderboard: Boolean(data?.showLeaderboard) }),
+    (data) => onData({
+      showVotes: Boolean(data?.showVotes),
+      showLeaderboard: Boolean(data?.showLeaderboard),
+      registrationOpen: data?.registrationOpen !== false,
+      registrationClosedMessage: data?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL",
+    }),
     onError
   );
 }

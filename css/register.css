@@ -95,6 +95,10 @@ body[data-theme="light"] .register-hero-backdrop {
   color: var(--text-soft);
 }
 
+.register-hero-highlight p:nth-of-type(2) {
+  display: none;
+}
+
 .instruction-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -338,6 +342,24 @@ body[data-theme="light"] .registration-card-disabled {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.035));
   transform: translateY(-1px);
+}
+
+.field.is-error input,
+.field.is-error select,
+.upload-field.is-error {
+  border-color: rgba(255, 109, 109, 0.72);
+  box-shadow:
+    0 0 0 4px rgba(255, 109, 109, 0.1),
+    0 18px 34px rgba(110, 17, 17, 0.18);
+}
+
+.field.is-success input,
+.field.is-success select,
+.upload-field.is-success {
+  border-color: rgba(127, 212, 139, 0.52);
+  box-shadow:
+    0 0 0 4px rgba(127, 212, 139, 0.08),
+    0 14px 28px rgba(20, 86, 36, 0.12);
 }
 
 .field select option {

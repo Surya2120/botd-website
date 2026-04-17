@@ -13,6 +13,10 @@ function showState(target, message, type = "info") {
   if (type === "success") target.classList.add("is-success");
 }
 
+function isPublicContestant(team) {
+  return team?.approved !== false && team?.visible !== false;
+}
+
 function mountHomeContent() {
   const titleNode = document.querySelector(".hero-copy h1");
   const subtitleNode = document.querySelector(".hero-subtitle");
@@ -53,12 +57,12 @@ function mountAnnouncementFeed() {
     (settings) => {
       const message = String(settings?.announcement || "").trim();
       hosts.forEach((host) => {
-        host.innerHTML = message ? `<ul class="simple-list"><li>${message}</li></ul>` : "<p>No data available</p>";
+        host.innerHTML = message ? `<ul class="simple-list"><li>${message}</li></ul>` : "<p>BOTD updates will appear here soon.</p>";
       });
     },
     (error) => {
       console.error("[BOTD] settings announcement load failed", error);
-      hosts.forEach((host) => { host.innerHTML = "<p>Failed to load announcement.</p>"; });
+      hosts.forEach((host) => { host.innerHTML = "<p>Unable to load updates. Please try again.</p>"; });
     }
   );
 }
@@ -71,7 +75,7 @@ function mountSponsors() {
     (items) => {
       console.log("[BOTD] sponsors loaded:", items.length);
       if (!items.length) {
-        host.innerHTML = "<p>No data available</p>";
+        host.innerHTML = "<p>BOTD partners will be announced soon.</p>";
         return;
       }
       const groups = items.reduce((acc, item) => {
@@ -97,7 +101,7 @@ function mountSponsors() {
     },
     (error) => {
       console.error("[BOTD] sponsors load failed", error);
-      host.innerHTML = "<p>Failed to load sponsors.</p>";
+      host.innerHTML = "<p>Unable to load sponsors. Please try again.</p>";
     }
   );
 }
@@ -152,8 +156,8 @@ function mountVotingPage() {
   function render() {
     const activeCats = categories.filter((item) => item.isActive);
     if (!activeCats.length) {
-      if (tabList) tabList.innerHTML = "<p>No data available</p>";
-      if (panelHost) panelHost.innerHTML = "<p>No data available</p>";
+      if (tabList) tabList.innerHTML = "<p>Contestants will be announcing soon.</p>";
+      if (panelHost) panelHost.innerHTML = "<p>Contestants will be announcing soon.</p>";
       if (selectedLabel) selectedLabel.textContent = "Voting for: None selected";
       syncVoteButtons();
       return;
@@ -173,7 +177,7 @@ function mountVotingPage() {
       return `<button class=\"vote-tab-button ${isActive ? "is-active" : ""}\" type=\"button\" data-live-category=\"${code}\" aria-selected=\"${isActive}\">${item.name || code}</button>`;
     }).join("");
 
-    const filtered = teams.filter((team) => String(team.categoryId || team.category || "").toUpperCase() === activeCategory);
+    const filtered = teams.filter((team) => String(team.categoryId || team.category || "").toUpperCase() === activeCategory && isPublicContestant(team));
     panelHost.innerHTML = filtered.length
       ? `<div class=\"contestant-vote-grid\">${filtered.map((team) => `
           <article class=\"vote-card-item\" data-team-card=\"${team.id}\">
@@ -183,7 +187,7 @@ function mountVotingPage() {
             <button type=\"button\" class=\"button button-primary vote-submit-button\" data-vote-team=\"${team.id}\">Vote</button>
           </article>
         `).join("")}</div>`
-      : "<p>No data available</p>";
+      : "<p>Contestants will be announcing soon.</p>";
 
     tabList.querySelectorAll("[data-live-category]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -201,7 +205,7 @@ function mountVotingPage() {
         const mobileNumber = mobileInput?.value?.trim() || "";
 
         if (!selected) {
-          showState(voteStatus, "Selected team not found.", "error");
+          showState(voteStatus, "Please choose a BOTD team again.", "error");
           return;
         }
 
@@ -229,7 +233,7 @@ function mountVotingPage() {
           if (mobileInput) mobileInput.value = "";
           if (selectedLabel) selectedLabel.textContent = "Voting for: None selected";
         } catch (error) {
-          showState(voteStatus, error.message || "Vote failed.", "error");
+          showState(voteStatus, "Your vote could not be submitted. Please try again.", "error");
         } finally {
           voteSubmitting = false;
           syncVoteButtons();
@@ -248,16 +252,15 @@ function mountVotingPage() {
     render();
   }, (error) => {
     console.error("[BOTD] categories load failed", error);
-    showState(voteStatus, "Failed to load categories.", "error");
+    showState(voteStatus, "Unable to load voting categories. Please try again.", "error");
   });
 
   const unsubTeams = subscribeTeams((items) => {
     teams = items;
-    console.log("[BOTD] teams loaded:", items.length);
     render();
   }, (error) => {
     console.error("[BOTD] teams load failed", error);
-    showState(voteStatus, "Failed to load teams.", "error");
+    showState(voteStatus, "Unable to load contestants. Please try again.", "error");
   });
 
   const unsubSettings = subscribeSettings((value) => {
@@ -270,7 +273,7 @@ function mountVotingPage() {
     updateCountdown();
   }, (error) => {
     console.error("[BOTD] settings load failed", error);
-    showState(voteStatus, "Failed to load settings.", "error");
+    showState(voteStatus, "Unable to load voting status. Please try again.", "error");
   });
 
   const timer = setInterval(updateCountdown, 1000);
@@ -289,7 +292,7 @@ function mountSeasonContestants() {
   function render() {
     const activeCats = categories.filter((item) => item.isActive);
     if (!activeCats.length) {
-      host.innerHTML = "<p>No data available</p>";
+      host.innerHTML = "<p>Contestants will be announcing soon.</p>";
       return;
     }
 
@@ -302,16 +305,16 @@ function mountSeasonContestants() {
       <div class="tab-list" role="tablist" aria-label="Contestant categories">
         ${activeCats.map((item) => {
           const code = String(item.code || "").toUpperCase();
-          const count = teams.filter((team) => String(team.categoryId || team.category || "").toUpperCase() === code).length;
+          const count = teams.filter((team) => String(team.categoryId || team.category || "").toUpperCase() === code && isPublicContestant(team)).length;
           return `<button class="tab-button ${code === activeCategory ? "is-active" : ""}" type="button" data-season-cat="${code}" aria-selected="${code === activeCategory}">${item.name || code} (${count})</button>`;
         }).join("")}
       </div>
       ${activeCats.map((item) => {
         const code = String(item.code || "").toUpperCase();
-        const list = teams.filter((team) => String(team.categoryId || team.category || "").toUpperCase() === code);
+        const list = teams.filter((team) => String(team.categoryId || team.category || "").toUpperCase() === code && isPublicContestant(team));
         return `
           <div class="tab-panel ${code === activeCategory ? "is-active" : ""}" id="${code.toLowerCase()}" role="tabpanel">
-            <p class="contestant-meta">${list.length ? `${list.length} teams are available in ${item.name || code}.` : "No data available"}</p>
+            <p class="contestant-meta">${list.length ? `${list.length} teams are available in ${item.name || code}.` : "Contestants will be announcing soon."}</p>
             <div class="contestant-grid">
               ${list.map((team) => `<article class="contestant-card"><img src="${team.image || "assets/images/poster1.jpg"}" alt="${team.name}"><h3>${team.name}</h3><p>${team.city || "-"} | Votes: ${Number(team.votes) || 0}</p></article>`).join("")}
             </div>
@@ -336,7 +339,6 @@ function mountSeasonContestants() {
 
   const unsubTeams = subscribeTeams((items) => {
     teams = items;
-    console.log("[BOTD] teams loaded (seasons):", items.length);
     render();
   });
 
@@ -400,7 +402,7 @@ function mountRegistrationForm() {
       form.reset();
       showState(status, "Registration submitted successfully.", "success");
     } catch (error) {
-      showState(status, error.message || "Failed to submit registration.", "error");
+      showState(status, "Registration could not be completed. Please try again.", "error");
     } finally {
       button.disabled = false;
     }
@@ -435,7 +437,7 @@ function mountSponsorEnquiryForm() {
       form.reset();
       showState(status, "Enquiry submitted successfully.", "success");
     } catch (error) {
-      showState(status, error.message || "Failed to submit enquiry.", "error");
+      showState(status, "Your sponsor enquiry could not be submitted. Please try again.", "error");
     } finally {
       if (submit) submit.disabled = false;
     }
@@ -469,7 +471,7 @@ function mountContactForm() {
       form.reset();
       showState(status, "Message sent successfully.", "success");
     } catch (error) {
-      showState(status, error.message || "Failed to send message.", "error");
+      showState(status, "Your message could not be sent. Please try again.", "error");
     } finally {
       if (submit) submit.disabled = false;
     }

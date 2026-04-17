@@ -3,162 +3,238 @@ require("dotenv").config();
 const crypto = require("crypto");
 const path = require("path");
 const express = require("express");
-const Razorpay = require("razorpay");
+require("dotenv").config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+
 const {
-  RAZORPAY_KEY_ID = "",
-  RAZORPAY_KEY_SECRET = "",
-  RAZORPAY_AMOUNT_PAISE = "9900",
-  RAZORPAY_CURRENCY = "INR",
+  CASHFREE_APP_ID = "",
+  CASHFREE_SECRET_KEY = "",
+  CASHFREE_ENVIRONMENT = "sandbox",
+  CASHFREE_API_VERSION = "2023-08-01",
+  CASHFREE_AMOUNT = "99",
+  CASHFREE_CURRENCY = "INR",
+  CORS_ORIGIN = "",
 } = process.env;
 
-const razorpay = new Razorpay({
-  key_id: RAZORPAY_KEY_ID,
-  key_secret: RAZORPAY_KEY_SECRET,
-});
+const CASHFREE_BASE_URL = CASHFREE_ENVIRONMENT === "production"
+  ? "https://api.cashfree.com/pg"
+  : "https://sandbox.cashfree.com/pg";
 
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 function validatePaymentCredentials() {
-  if (!isNonEmptyString(RAZORPAY_KEY_ID) || !isNonEmptyString(RAZORPAY_KEY_SECRET)) {
-    throw new Error("Razorpay credentials are missing. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+  if (!isNonEmptyString(CASHFREE_APP_ID) || !isNonEmptyString(CASHFREE_SECRET_KEY)) {
+    throw new Error("Cashfree credentials are missing. Set CASHFREE_APP_ID and CASHFREE_SECRET_KEY.");
   }
 }
 
-function sanitizeReceiptPart(value, fallback) {
-  const normalized = String(value || fallback || "botd")
+function sanitizeOrderIdPart(value, fallback) {
+  return String(value || fallback || "botd")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/[^a-z0-9_-]+/g, "_")
     .replace(/^_+|_+$/g, "")
-    .slice(0, 24);
-
-  return normalized || fallback;
+    .slice(0, 20) || fallback;
 }
+
+function createOrderId(seedValue) {
+  const token = crypto.randomBytes(4).toString("hex");
+  const stamp = Date.now();
+  return `botd_${sanitizeOrderIdPart(seedValue, "registration")}_${stamp}_${token}`.slice(0, 45);
+}
+
+function isPaidCashfreeStatus(value) {
+  return ["PAID", "SUCCESS", "SUCCESSFUL", "COMPLETED"].includes(String(value || "").toUpperCase());
+}
+
+async function callCashfree(endpoint, options = {}) {
+  validatePaymentCredentials();
+
+  const response = await fetch(`${CASHFREE_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "x-api-version": CASHFREE_API_VERSION,
+      "x-client-id": CASHFREE_APP_ID,
+      "x-client-secret": CASHFREE_SECRET_KEY,
+      "x-request-id": crypto.randomUUID(),
+      ...(options.headers || {}),
+    },
+  });
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch (error) {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(payload?.message || payload?.type || "Cashfree API request failed.");
+  }
+
+  return payload;
+}
+
+app.use((request, response, next) => {
+  if (isNonEmptyString(CORS_ORIGIN)) {
+    response.setHeader("Access-Control-Allow-Origin", CORS_ORIGIN);
+    response.setHeader("Vary", "Origin");
+  }
+
+  response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type,Accept");
+
+  if (request.method === "OPTIONS") {
+    return response.sendStatus(204);
+  }
+
+  return next();
+});
 
 app.use(express.json({ limit: "256kb" }));
 app.use(express.static(__dirname));
 
-app.get("/api/razorpay/config", (request, response) => {
-  if (!isNonEmptyString(RAZORPAY_KEY_ID)) {
+app.get("/api/cashfree/config", (request, response) => {
+  if (!isNonEmptyString(CASHFREE_APP_ID)) {
     return response.status(500).json({
       success: false,
-      message: "RAZORPAY_KEY_ID is not configured on the server.",
+      message: "CASHFREE_APP_ID is not configured on the server.",
     });
   }
 
   return response.json({
     success: true,
-    keyId: RAZORPAY_KEY_ID,
-    amountPaise: Number(RAZORPAY_AMOUNT_PAISE || 9900),
-    currency: RAZORPAY_CURRENCY || "INR",
+    appId: CASHFREE_APP_ID,
+    mode: CASHFREE_ENVIRONMENT === "production" ? "production" : "sandbox",
+    amount: Number(CASHFREE_AMOUNT || 99),
+    currency: CASHFREE_CURRENCY || "INR",
   });
 });
 
-app.post("/api/razorpay/create-order", async (request, response) => {
+app.post("/api/cashfree/create-order", async (request, response) => {
   try {
-    validatePaymentCredentials();
-
-    const amountPaise = Number(request.body?.amountPaise || RAZORPAY_AMOUNT_PAISE || 9900);
-    const currency = String(request.body?.currency || RAZORPAY_CURRENCY || "INR").trim().toUpperCase();
+    const amount = Number(request.body?.orderAmount || CASHFREE_AMOUNT || 99);
+    const currency = String(request.body?.currency || CASHFREE_CURRENCY || "INR").trim().toUpperCase();
     const name = String(request.body?.name || "").trim();
     const email = String(request.body?.email || "").trim();
-    const phone = String(request.body?.phone || "").trim();
+    const phone = String(request.body?.phone || "").replace(/\D/g, "").slice(0, 15);
 
-    if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
+    if (!Number.isFinite(amount) || amount < 1) {
       return response.status(400).json({
         success: false,
-        message: "Invalid order amount.",
+        message: "Invalid Cashfree order amount.",
       });
     }
 
-    if (!isNonEmptyString(currency)) {
-      return response.status(400).json({
-        success: false,
-        message: "Invalid currency.",
-      });
-    }
-
-    const receipt = [
-      "botd",
-      sanitizeReceiptPart(name || email || phone || "registration", "registration"),
-      Date.now(),
-    ].join("_").slice(0, 40);
-
-    const order = await razorpay.orders.create({
-      amount: amountPaise,
-      currency,
-      receipt,
-      notes: {
-        name,
-        email,
-        phone,
-        source: "botd_registration",
+    const orderId = createOrderId(name || email || phone);
+    const orderPayload = {
+      order_id: orderId,
+      order_amount: Number(amount.toFixed(2)),
+      order_currency: currency,
+      customer_details: {
+        customer_id: sanitizeOrderIdPart(email || phone || name || orderId, "customer"),
+        customer_name: name || "BOTD User",
+        customer_email: email || "support@botd.in",
+        customer_phone: phone || "9999999999",
       },
+      order_meta: {
+        return_url: `${request.protocol}://${request.get("host")}/register.html?cashfree_order_id=${orderId}`,
+      },
+      order_note: "BOTD registration payment",
+    };
+
+    const cashfreeOrder = await callCashfree("/orders", {
+      method: "POST",
+      body: JSON.stringify(orderPayload),
     });
 
     return response.json({
       success: true,
-      orderId: order.id,
-      amountPaise: order.amount,
-      currency: order.currency,
-      receipt: order.receipt,
+      orderId: cashfreeOrder.order_id,
+      cfOrderId: cashfreeOrder.cf_order_id,
+      paymentSessionId: cashfreeOrder.payment_session_id,
+      orderStatus: cashfreeOrder.order_status,
+      amount: cashfreeOrder.order_amount,
+      currency: cashfreeOrder.order_currency,
     });
   } catch (error) {
-    console.error("[BOTD] Razorpay create-order failed", error);
+    console.error("[BOTD] Cashfree create-order failed", error);
     return response.status(500).json({
       success: false,
-      message: error.message || "Unable to create Razorpay order.",
+      message: error.message || "Unable to create Cashfree order.",
     });
   }
 });
 
-app.post("/api/razorpay/verify", (request, response) => {
+app.post("/api/cashfree/verify-order", async (request, response) => {
   try {
-    validatePaymentCredentials();
+    const orderId = String(request.body?.orderId || "").trim();
 
-    const razorpayOrderId = String(request.body?.razorpay_order_id || "").trim();
-    const razorpayPaymentId = String(request.body?.razorpay_payment_id || "").trim();
-    const razorpaySignature = String(request.body?.razorpay_signature || "").trim();
-
-    if (!isNonEmptyString(razorpayOrderId) || !isNonEmptyString(razorpayPaymentId) || !isNonEmptyString(razorpaySignature)) {
+    if (!isNonEmptyString(orderId)) {
       return response.status(400).json({
         success: false,
         verified: false,
-        message: "Missing Razorpay payment verification fields.",
+        message: "Missing Cashfree order ID.",
       });
     }
 
-    const generatedSignature = crypto
-      .createHmac("sha256", RAZORPAY_KEY_SECRET)
-      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-      .digest("hex");
+    const order = await callCashfree(`/orders/${encodeURIComponent(orderId)}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-    const verified = generatedSignature === razorpaySignature;
+    let payments = [];
+    try {
+      const paymentResponse = await callCashfree(`/orders/${encodeURIComponent(orderId)}/payments`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      payments = Array.isArray(paymentResponse) ? paymentResponse : [];
+    } catch (paymentError) {
+      console.warn("[BOTD] Cashfree payment detail lookup failed", paymentError.message);
+      payments = [];
+    }
+
+    const successfulPayment = payments.find((payment) => isPaidCashfreeStatus(payment?.payment_status));
+    const verified = isPaidCashfreeStatus(order?.order_status) || Boolean(successfulPayment);
 
     if (!verified) {
       return response.status(400).json({
         success: false,
         verified: false,
-        message: "Payment verification failed.",
+        orderId: order?.order_id || orderId,
+        orderStatus: order?.order_status || "ACTIVE",
+        message: "Payment is not completed yet.",
       });
     }
 
     return response.json({
       success: true,
       verified: true,
-      orderId: razorpayOrderId,
-      paymentId: razorpayPaymentId,
+      orderId: order.order_id,
+      cfOrderId: order.cf_order_id,
+      orderStatus: order.order_status,
+      paymentId: successfulPayment?.cf_payment_id || "",
+      amount: successfulPayment?.payment_amount || order.order_amount || Number(CASHFREE_AMOUNT || 99),
+      currency: order.order_currency || CASHFREE_CURRENCY || "INR",
+      paymentTime: successfulPayment?.payment_completion_time || successfulPayment?.payment_time || new Date().toISOString(),
+      paymentDetails: successfulPayment || null,
     });
   } catch (error) {
-    console.error("[BOTD] Razorpay verification failed", error);
+    console.error("[BOTD] Cashfree order verification failed", error);
     return response.status(500).json({
       success: false,
       verified: false,
-      message: error.message || "Unable to verify payment.",
+      message: error.message || "Unable to verify Cashfree order.",
     });
   }
 });
