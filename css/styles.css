@@ -110,12 +110,21 @@ body[data-theme="light"] {
 }
 
 html {
+  height: auto;
+  min-height: -webkit-fill-available;
+  overflow-x: hidden;
+  overflow-y: auto;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   font-family: "Segoe UI", "Trebuchet MS", Arial, sans-serif;
   background: var(--bg-gradient);
   color: var(--text);
@@ -123,6 +132,12 @@ body {
     background-color var(--transition),
     color var(--transition),
     background var(--transition);
+}
+
+@supports (-webkit-touch-callout: none) {
+  body {
+    min-height: -webkit-fill-available;
+  }
 }
 
 .visually-hidden {
@@ -167,7 +182,9 @@ img,
 
 .site-shell {
   position: relative;
-  overflow: clip;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .site-shell::before,
@@ -391,7 +408,7 @@ body[data-theme="light"] .theme-toggle-thumb {
 
 .hero {
   position: relative;
-  min-height: calc(100vh - var(--nav-height));
+  min-height: calc(100dvh - var(--nav-height));
   display: grid;
   align-items: center;
   padding: 88px 0 72px;

@@ -1,6 +1,22 @@
 .register-hero {
-  min-height: 78vh;
+  min-height: min(78dvh, 760px);
   padding-bottom: 88px;
+}
+
+body.register-page {
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.register-page .site-shell,
+body.register-page main {
+  min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .register-hero-backdrop {
@@ -169,6 +185,7 @@ body[data-theme="light"] .register-note-card {
   background:
     linear-gradient(180deg, rgba(18, 18, 18, 0.88), rgba(24, 24, 24, 0.96)),
     radial-gradient(circle at top right, rgba(255, 183, 60, 0.08), transparent 28%);
+  overflow: visible;
   box-shadow:
     var(--shadow),
     0 0 0 1px rgba(255, 197, 66, 0.08),
@@ -284,8 +301,10 @@ body[data-theme="light"] .registration-card-disabled {
 }
 
 .registration-form {
-  display: grid;
-  gap: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 100%;
 }
 
 .form-grid,
@@ -997,7 +1016,7 @@ body[data-theme="light"] .field select {
   }
 
   .registration-form {
-    gap: 24px;
+    gap: 12px;
   }
 
   .payment-panel {
