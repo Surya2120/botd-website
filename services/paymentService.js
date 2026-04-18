@@ -1,4 +1,15 @@
-const PAYMENT_API_BASE = window.BOTD_CASHFREE_API_BASE || "/api/cashfree";
+function getPaymentApiBase() {
+  if (window.BOTD_CASHFREE_API_BASE) {
+    return window.BOTD_CASHFREE_API_BASE;
+  }
+
+  const { hostname, port } = window.location;
+  const isLocalStaticServer = ["127.0.0.1", "localhost"].includes(hostname) && port && port !== "3000";
+
+  return isLocalStaticServer ? "http://localhost:3000/api/cashfree" : "/api/cashfree";
+}
+
+const PAYMENT_API_BASE = getPaymentApiBase();
 
 export const CASHFREE_CONFIG = {
   enabled: true,
@@ -53,6 +64,10 @@ export async function loadCashfreeConfig() {
 }
 
 export async function createCashfreeOrder(registrationPayload = {}) {
+  const config = cachedCashfreeConfig || await loadCashfreeConfig();
+  const customerName = registrationPayload?.name || registrationPayload?.fullName || "";
+  const returnUrl = `${window.location.origin}${window.location.pathname}?cashfree_order_id={order_id}`;
+
   const response = await fetch(`${PAYMENT_API_BASE}/create-order`, {
     method: "POST",
     headers: {
@@ -60,11 +75,12 @@ export async function createCashfreeOrder(registrationPayload = {}) {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      orderAmount: CASHFREE_CONFIG.amount,
-      currency: CASHFREE_CONFIG.currency,
-      name: registrationPayload?.name || "",
+      orderAmount: config.amount || CASHFREE_CONFIG.amount,
+      currency: config.currency || CASHFREE_CONFIG.currency,
+      name: customerName,
       email: registrationPayload?.email || "",
       phone: registrationPayload?.phone || "",
+      returnUrl,
     }),
   });
 
@@ -78,8 +94,8 @@ export async function createCashfreeOrder(registrationPayload = {}) {
     orderId: payload.orderId,
     cfOrderId: payload.cfOrderId || "",
     paymentSessionId: payload.paymentSessionId,
-    amount: Number(payload.amount || CASHFREE_CONFIG.amount),
-    currency: payload.currency || CASHFREE_CONFIG.currency,
+    amount: Number(payload.amount || config.amount || CASHFREE_CONFIG.amount),
+    currency: payload.currency || config.currency || CASHFREE_CONFIG.currency,
     orderStatus: payload.orderStatus || "ACTIVE",
   };
 }

@@ -7,14 +7,14 @@
   background:
     linear-gradient(90deg, rgba(5, 5, 5, 0.95) 0%, rgba(5, 5, 5, 0.74) 48%, rgba(5, 5, 5, 0.48) 100%),
     radial-gradient(circle at top right, rgba(246, 182, 60, 0.18), transparent 32%),
-    url("../assets/images/posters/poster1.webp") center center / cover no-repeat;
+    url("../assets/images/posters/poster7.webp") center center / cover no-repeat;
 }
 
 body[data-theme="light"] .contact-hero-backdrop {
   background:
     linear-gradient(90deg, rgba(242, 237, 227, 0.95) 0%, rgba(242, 237, 227, 0.76) 48%, rgba(242, 237, 227, 0.48) 100%),
     radial-gradient(circle at top right, rgba(216, 139, 18, 0.18), transparent 32%),
-    url("../assets/images/posters/poster1.webp") center center / cover no-repeat;
+    url("../assets/images/posters/poster7.webp") center center / cover no-repeat;
 }
 
 .contact-hero-content,
@@ -124,9 +124,23 @@ body[data-theme="light"] .contact-hero-backdrop {
 
 body[data-theme="light"] .contact-form-card {
   background:
-    radial-gradient(circle at 88% 12%, rgba(216, 139, 18, 0.14), transparent 30%),
-    radial-gradient(circle at 0% 100%, rgba(216, 139, 18, 0.08), transparent 32%),
-    linear-gradient(145deg, rgba(255, 252, 247, 0.96), rgba(250, 243, 233, 0.98));
+    radial-gradient(circle at 88% 12%, rgba(200, 121, 8, 0.14), transparent 30%),
+    radial-gradient(circle at 0% 100%, rgba(200, 121, 8, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(255, 250, 242, 0.96), rgba(249, 235, 214, 0.98));
+}
+
+body[data-theme="light"] .whatsapp-card,
+body[data-theme="light"] .map-card,
+body[data-theme="light"] .social-card {
+  background:
+    radial-gradient(circle at top right, rgba(200, 121, 8, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(255, 250, 242, 0.94), rgba(249, 235, 214, 0.96));
+}
+
+body[data-theme="light"] .map-placeholder {
+  background:
+    radial-gradient(circle at center, rgba(200, 121, 8, 0.12), transparent 44%),
+    linear-gradient(135deg, rgba(255, 236, 201, 0.78), rgba(247, 223, 187, 0.72));
 }
 
 .contact-form-card .form-header h2 {
@@ -260,7 +274,7 @@ body[data-theme="light"] .contact-form .field > span {
 body[data-theme="light"] .contact-form .field input,
 body[data-theme="light"] .contact-form .field select,
 body[data-theme="light"] .contact-form .field textarea {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.56));
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.9), rgba(255, 243, 222, 0.74));
 }
 
 .contact-form-actions {
@@ -290,6 +304,8 @@ body[data-theme="light"] .contact-form .field textarea {
 }
 
 .map-placeholder {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,6 +319,104 @@ body[data-theme="light"] .contact-form .field textarea {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.map-placeholder > span:not(.vidhana-dome):not(.vidhana-roof):not(.vidhana-body):not(.vidhana-steps) {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+}
+
+.vidhana-outline {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  z-index: 1;
+  width: min(82%, 360px);
+  height: 112px;
+  opacity: 0.5;
+  transform: translateX(-50%);
+}
+
+.vidhana-outline span {
+  position: absolute;
+  display: block;
+}
+
+.vidhana-dome {
+  border: 2px solid rgba(255, 214, 109, 0.46);
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+}
+
+.vidhana-dome.main {
+  left: 50%;
+  top: 0;
+  width: 84px;
+  height: 44px;
+  transform: translateX(-50%);
+}
+
+.vidhana-dome.main::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -16px;
+  width: 2px;
+  height: 18px;
+  background: rgba(255, 214, 109, 0.5);
+  transform: translateX(-50%);
+}
+
+.vidhana-dome.left,
+.vidhana-dome.right {
+  top: 24px;
+  width: 54px;
+  height: 30px;
+  opacity: 0.82;
+}
+
+.vidhana-dome.left {
+  left: 34px;
+}
+
+.vidhana-dome.right {
+  right: 34px;
+}
+
+.vidhana-roof {
+  left: 0;
+  right: 0;
+  top: 44px;
+  height: 20px;
+  border-top: 2px solid rgba(255, 214, 109, 0.46);
+  border-bottom: 2px solid rgba(255, 214, 109, 0.28);
+  clip-path: polygon(7% 100%, 18% 0, 82% 0, 93% 100%);
+}
+
+.vidhana-body {
+  left: 32px;
+  right: 32px;
+  top: 62px;
+  height: 34px;
+  border: 2px solid rgba(255, 214, 109, 0.3);
+  border-top: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 18px,
+      rgba(255, 214, 109, 0.34) 18px 20px
+    );
+}
+
+.vidhana-steps {
+  left: 62px;
+  right: 62px;
+  bottom: 0;
+  height: 16px;
+  border-top: 2px solid rgba(255, 214, 109, 0.34);
+  border-bottom: 2px solid rgba(255, 214, 109, 0.24);
+  box-shadow: 0 -7px 0 -5px rgba(255, 214, 109, 0.28);
 }
 
 .social-links {

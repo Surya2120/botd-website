@@ -1131,7 +1131,7 @@ function renderSeasonContestants() {
             ${teams.map((team) => `
               <article class="contestant-card">
                 <img src="${team.image || "assets/images/poster1.jpg"}" alt="${team.name || "BOTD contestant"}">
-                <h3>${team.name || "Unnamed contestant"}</h3>
+                <h3 class="season-graffiti-name">${team.name || "Unnamed contestant"}</h3>
                 <p>${team.city || "Bangalore"}</p>
               </article>
             `).join("")}
@@ -1152,8 +1152,11 @@ function renderSeasonContestants() {
       host.querySelectorAll(".tab-panel").forEach((panel) => {
         panel.classList.toggle("is-active", panel.id === targetId);
       });
+      replaySeasonGraffitiPaintGroup(host.querySelector(`#${targetId}`) || host);
     });
   });
+
+  replaySeasonGraffitiPaintGroup(host);
 }
 
 function loadHomeContent() {
@@ -1243,7 +1246,40 @@ function loadJudgesRealtime() {
       setElementText(`${prefix}-name`, judge.name || "Judge");
       setElementText(`${prefix}-role`, judge.designation || judge.role || "BOTD Judge");
       setElementImage(`${prefix}-image`, judge.image, judge.name || "BOTD Judge");
+      replayJudgeNamePaint(`${prefix}-name`);
     });
+  });
+}
+
+function replayJudgeNamePaint(elementId) {
+  const nameElement = document.getElementById(elementId);
+
+  replayJudgeNamePaintElement(nameElement);
+}
+
+function replayJudgeNamePaintElement(nameElement) {
+  replaySeasonGraffitiPaintElement(nameElement);
+}
+
+function replaySeasonGraffitiPaintElement(nameElement) {
+  if (!nameElement) {
+    return;
+  }
+
+  nameElement.classList.remove("is-painted");
+  void nameElement.offsetWidth;
+  nameElement.classList.add("is-painted");
+}
+
+function replayJudgeNamePaintGroup(root = document) {
+  root.querySelectorAll?.(".judge-profile-card h3").forEach((nameElement) => {
+    replaySeasonGraffitiPaintElement(nameElement);
+  });
+}
+
+function replaySeasonGraffitiPaintGroup(root = document) {
+  root.querySelectorAll?.(".season-graffiti-name").forEach((nameElement) => {
+    replaySeasonGraffitiPaintElement(nameElement);
   });
 }
 
@@ -1651,6 +1687,10 @@ function setupAccordions() {
         trigger.setAttribute("aria-expanded", String(!isOpen));
         item.classList.toggle("is-open", !isOpen);
         panel.classList.toggle("is-open", !isOpen);
+
+        if (!isOpen) {
+          replaySeasonGraffitiPaintGroup(panel);
+        }
       });
 
       trigger.dataset.bound = "true";

@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const crypto = require("crypto");
 const path = require("path");
 const express = require("express");
@@ -21,6 +19,10 @@ const {
 const CASHFREE_BASE_URL = CASHFREE_ENVIRONMENT === "production"
   ? "https://api.cashfree.com/pg"
   : "https://sandbox.cashfree.com/pg";
+const ALLOWED_ORIGINS = String(CORS_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -81,8 +83,11 @@ async function callCashfree(endpoint, options = {}) {
 }
 
 app.use((request, response, next) => {
-  if (isNonEmptyString(CORS_ORIGIN)) {
-    response.setHeader("Access-Control-Allow-Origin", CORS_ORIGIN);
+  const requestOrigin = request.headers.origin;
+  const allowedOrigin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0];
+
+  if (isNonEmptyString(allowedOrigin)) {
+    response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
     response.setHeader("Vary", "Origin");
   }
 
@@ -123,6 +128,7 @@ app.post("/api/cashfree/create-order", async (request, response) => {
     const name = String(request.body?.name || "").trim();
     const email = String(request.body?.email || "").trim();
     const phone = String(request.body?.phone || "").replace(/\D/g, "").slice(0, 15);
+    const returnUrl = String(request.body?.returnUrl || "").trim();
 
     if (!Number.isFinite(amount) || amount < 1) {
       return response.status(400).json({
@@ -132,6 +138,7 @@ app.post("/api/cashfree/create-order", async (request, response) => {
     }
 
     const orderId = createOrderId(name || email || phone);
+    const resolvedReturnUrl = returnUrl ? returnUrl.replaceAll("{order_id}", orderId) : "";
     const orderPayload = {
       order_id: orderId,
       order_amount: Number(amount.toFixed(2)),
@@ -143,7 +150,7 @@ app.post("/api/cashfree/create-order", async (request, response) => {
         customer_phone: phone || "9999999999",
       },
       order_meta: {
-        return_url: `${request.protocol}://${request.get("host")}/register.html?cashfree_order_id=${orderId}`,
+        return_url: resolvedReturnUrl || `${request.protocol}://${request.get("host")}/register.html?cashfree_order_id=${orderId}`,
       },
       order_note: "BOTD registration payment",
     };

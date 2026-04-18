@@ -7,14 +7,14 @@
   background:
     linear-gradient(90deg, rgba(5, 5, 5, 0.95) 0%, rgba(5, 5, 5, 0.74) 48%, rgba(5, 5, 5, 0.48) 100%),
     radial-gradient(circle at top right, rgba(246, 182, 60, 0.18), transparent 32%),
-    url("../assets/images/posters/poster1.webp") center center / cover no-repeat;
+    url("../assets/images/posters/poster8.webp") center center / cover no-repeat;
 }
 
 body[data-theme="light"] .sponsors-hero-backdrop {
   background:
     linear-gradient(90deg, rgba(242, 237, 227, 0.95) 0%, rgba(242, 237, 227, 0.76) 48%, rgba(242, 237, 227, 0.48) 100%),
     radial-gradient(circle at top right, rgba(216, 139, 18, 0.18), transparent 32%),
-    url("../assets/images/posters/poster1.webp") center center / cover no-repeat;
+    url("../assets/images/posters/poster8.webp") center center / cover no-repeat;
 }
 
 .sponsors-hero-content,
@@ -358,9 +358,20 @@ body[data-theme="light"] .sponsors-hero-backdrop {
 
 body[data-theme="light"] .sponsor-form {
   background:
-    radial-gradient(circle at 88% 12%, rgba(216, 139, 18, 0.14), transparent 30%),
-    radial-gradient(circle at 0% 100%, rgba(216, 139, 18, 0.08), transparent 32%),
-    linear-gradient(145deg, rgba(255, 252, 247, 0.96), rgba(250, 243, 233, 0.98));
+    radial-gradient(circle at 88% 12%, rgba(200, 121, 8, 0.14), transparent 30%),
+    radial-gradient(circle at 0% 100%, rgba(200, 121, 8, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(255, 250, 242, 0.96), rgba(249, 235, 214, 0.98));
+}
+
+body[data-theme="light"] .presented-banner,
+body[data-theme="light"] .dynamic-sponsor-card,
+body[data-theme="light"] .sponsors-empty-state,
+body[data-theme="light"] .sponsors-loading-state {
+  background:
+    radial-gradient(circle at top right, rgba(200, 121, 8, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(255, 250, 242, 0.94), rgba(249, 235, 214, 0.96));
+  border-color: rgba(153, 99, 21, 0.2);
+  box-shadow: 0 22px 52px rgba(93, 58, 12, 0.11);
 }
 
 .sponsor-form-grid {
@@ -479,7 +490,7 @@ body[data-theme="light"] .sponsor-form .field > span {
 body[data-theme="light"] .sponsor-form .field input,
 body[data-theme="light"] .sponsor-form .field select,
 body[data-theme="light"] .sponsor-form .field textarea {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.56));
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.9), rgba(255, 243, 222, 0.74));
 }
 
 .sponsor-form-actions {
