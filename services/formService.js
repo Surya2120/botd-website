@@ -1,7 +1,9 @@
 import {
   addDoc,
   collection,
+  doc,
   serverTimestamp,
+  setDoc,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import {
   getDownloadURL,
@@ -704,6 +706,32 @@ export async function submitRegistration(payload) {
     console.error("[BOTD] submitRegistration failed", error);
     throw error;
   }
+}
+
+export async function submitRegistrationInterest(payload = {}) {
+  const deviceId = String(payload.deviceId || "").trim();
+  const interestId = deviceId || `interest_${Date.now()}`;
+  const interestRef = doc(db, "registrationInterest", interestId);
+
+  await setDoc(
+    interestRef,
+    {
+      deviceId: interestId,
+      name: String(payload.name || "").trim(),
+      phone: String(payload.phone || "").trim(),
+      email: String(payload.email || "").trim(),
+      category: String(payload.category || "").trim(),
+      source: payload.source || "register_page",
+      page: payload.page || window.location.pathname,
+      userAgent: window.navigator?.userAgent || "",
+      interestCounted: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return { id: interestRef.id };
 }
 
 export async function submitSponsorEnquiry(payload) {

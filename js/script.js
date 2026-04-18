@@ -25,7 +25,7 @@ import {
 } from "../services/adminService.js";
 import { subscribeCategories } from "../services/categoryService.js";
 import { db } from "../services/firebase.js";
-import { submitContactMessage, submitRegistration, submitSponsorEnquiry } from "../services/formService.js";
+import { submitContactMessage, submitRegistration, submitRegistrationInterest, submitSponsorEnquiry } from "../services/formService.js";
 import { subscribeHomeContent } from "../services/homeService.js";
 import {
   CASHFREE_CONFIG,
@@ -120,6 +120,7 @@ let liveUiControls = {
   showVotes: false,
   showLeaderboard: true,
   registrationOpen: true,
+  showInterestButton: true,
   registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
 };
 let currentVoteConfirmation = null;
@@ -709,6 +710,7 @@ function setUiControlsState(settings = {}) {
     showVotes: Boolean(settings?.showVotes),
     showLeaderboard: settings?.showLeaderboard !== false,
     registrationOpen: settings?.registrationOpen !== false,
+    showInterestButton: settings?.showInterestButton !== false,
     registrationClosedMessage: String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL"),
   };
   registrationPortalController?.applyAvailability?.(liveUiControls);
@@ -1826,6 +1828,9 @@ function setupRegistrationFormLegacyDisabled() {
   const audioName = registrationForm.querySelector("#audio-file-name");
   const photoName = registrationForm.querySelector("#photo-file-name");
   const payButton = registrationForm.querySelector("#pay-submit");
+  const interestPanel = registrationForm.querySelector("#registration-interest-panel");
+  const interestButton = registrationForm.querySelector("#registration-interest-button");
+  const interestStatus = registrationForm.querySelector("#registration-interest-status");
   const statusMessage = registrationForm.querySelector("#form-status");
   const successMessage = registrationForm.querySelector("#success-message");
   const uploadProgress = registrationForm.querySelector("#upload-progress");
@@ -2225,6 +2230,9 @@ function setupRegistrationForm() {
   const audioName = registrationForm.querySelector("#audio-file-name");
   const photoName = registrationForm.querySelector("#photo-file-name");
   const payButton = registrationForm.querySelector("#pay-submit");
+  const interestPanel = registrationForm.querySelector("#registration-interest-panel");
+  const interestButton = registrationForm.querySelector("#registration-interest-button");
+  const interestStatus = registrationForm.querySelector("#registration-interest-status");
   const statusMessage = registrationForm.querySelector("#form-status");
   const successMessage = registrationForm.querySelector("#success-message");
   const uploadProgress = registrationForm.querySelector("#upload-progress");
@@ -2239,6 +2247,18 @@ function setupRegistrationForm() {
   const heroCopy = document.getElementById("registration-hero-copy") || document.querySelector(".register-hero-highlight p");
   const allControls = Array.from(registrationForm.querySelectorAll("input, select, textarea, button"));
   let registrationOpen = !defaultClosed;
+
+  function setInterestStatus(message, tone) {
+    if (!interestStatus) {
+      return;
+    }
+
+    interestStatus.textContent = message;
+    interestStatus.classList.remove("is-error", "is-success");
+    if (tone) {
+      interestStatus.classList.add(tone);
+    }
+  }
 
   function setStatus(message, tone) {
     if (!statusMessage) {
@@ -2425,7 +2445,17 @@ function setupRegistrationForm() {
       disabledBanner.hidden = registrationOpen;
     }
 
+    const showInterestButton = settings?.showInterestButton !== false;
+    if (interestPanel) {
+      interestPanel.hidden = !showInterestButton;
+    }
+
     allControls.forEach((control) => {
+      if (control.dataset.keepActive === "true") {
+        control.disabled = !showInterestButton;
+        return;
+      }
+
       control.disabled = !registrationOpen;
     });
 
@@ -2458,6 +2488,39 @@ function setupRegistrationForm() {
     }
 
     syncSubmitState();
+  }
+
+  async function handleRegistrationInterest() {
+    if (!interestButton || interestButton.disabled) {
+      return;
+    }
+
+    const previousText = interestButton.textContent;
+    interestButton.disabled = true;
+    interestButton.textContent = "Saving...";
+    setInterestStatus("Recording your interest...", "");
+
+    try {
+      const payload = {
+        deviceId: getPersistentDeviceId(),
+        name: registrationForm.fullName?.value.trim() || "",
+        phone: sanitizePhoneDigits(registrationForm.phone?.value.trim() || ""),
+        email: registrationForm.email?.value.trim() || "",
+        category: registrationForm.category?.value || "",
+        source: "register_page",
+        page: window.location.pathname,
+      };
+
+      await submitRegistrationInterest(payload);
+      window.localStorage?.setItem("botd-registration-interest-recorded", "true");
+      interestButton.textContent = "Interest Recorded";
+      setInterestStatus("Interest recorded. BOTD will keep you posted.", "is-success");
+    } catch (error) {
+      console.error("[BOTD] Registration interest save failed", error);
+      interestButton.disabled = false;
+      interestButton.textContent = previousText || "I'm Interested";
+      setInterestStatus("Unable to record interest right now. Please try again.", "is-error");
+    }
   }
 
   function validateForm() {
@@ -2726,6 +2789,7 @@ function setupRegistrationForm() {
     applyAvailability(settings = {}) {
       applyRegistrationAvailability({
         registrationOpen: settings?.registrationOpen !== false,
+        showInterestButton: settings?.showInterestButton !== false,
         registrationClosedMessage: String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL"),
       });
     },
@@ -2751,6 +2815,7 @@ function setupRegistrationForm() {
   guardianConsentInput?.addEventListener("change", syncConsentState);
   termsCollapseToggle?.addEventListener("click", () => syncTermsCollapse());
   payButton?.addEventListener("click", startPayment);
+  interestButton?.addEventListener("click", handleRegistrationInterest);
 
   const paymentLabel = payButton?.querySelector(".payment-button-text");
   if (paymentLabel) {
@@ -2764,6 +2829,7 @@ function setupRegistrationForm() {
   syncConsentState();
   applyRegistrationAvailability({
     registrationOpen: liveUiControls.registrationOpen,
+    showInterestButton: liveUiControls.showInterestButton !== false,
     registrationClosedMessage: liveUiControls.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL",
   });
 }

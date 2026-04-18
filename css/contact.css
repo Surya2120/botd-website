@@ -91,47 +91,153 @@ body[data-theme="light"] .contact-hero-backdrop {
 .whatsapp-card,
 .map-card,
 .social-card {
-  padding: 30px;
+  padding: clamp(24px, 3.4vw, 40px);
 }
 
 .contact-form-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 34px;
   background:
-    linear-gradient(180deg, rgba(18, 18, 18, 0.86), rgba(24, 24, 24, 0.96)),
-    radial-gradient(circle at top right, rgba(255, 183, 60, 0.08), transparent 30%);
+    radial-gradient(circle at 88% 12%, rgba(255, 187, 58, 0.16), transparent 30%),
+    radial-gradient(circle at 0% 100%, rgba(255, 214, 109, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(20, 20, 20, 0.92), rgba(10, 10, 10, 0.96));
   border-color: rgba(255, 197, 66, 0.22);
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.contact-form-card::after {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border: 1px dashed rgba(255, 214, 109, 0.12);
+  border-radius: 24px;
+  pointer-events: none;
+}
+
+.contact-form-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 body[data-theme="light"] .contact-form-card {
   background:
-    linear-gradient(180deg, rgba(255, 252, 247, 0.95), rgba(250, 243, 233, 0.98)),
-    radial-gradient(circle at top right, rgba(216, 139, 18, 0.08), transparent 30%);
+    radial-gradient(circle at 88% 12%, rgba(216, 139, 18, 0.14), transparent 30%),
+    radial-gradient(circle at 0% 100%, rgba(216, 139, 18, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(255, 252, 247, 0.96), rgba(250, 243, 233, 0.98));
+}
+
+.contact-form-card .form-header h2 {
+  font-size: clamp(1.75rem, 3.2vw, 2.6rem);
+  line-height: 1.05;
 }
 
 .contact-form {
   display: grid;
-  gap: 22px;
+  gap: 26px;
 }
 
 .contact-form-actions .button {
-  min-width: 180px;
+  min-width: min(100%, 240px);
+  box-shadow: 0 18px 42px rgba(255, 174, 54, 0.16);
 }
 
 .contact-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 22px 18px;
+  width: 100%;
 }
 
 .contact-form-full {
   grid-column: 1 / -1;
 }
 
-.field textarea {
+.contact-form .field {
   width: 100%;
-  padding: 16px 18px;
+  min-width: 0;
+}
+
+.contact-form .field > span {
+  background:
+    linear-gradient(135deg, rgba(255, 214, 109, 0.16), rgba(255, 214, 109, 0.06)),
+    rgba(6, 6, 6, 0.92);
+  border: 1px solid rgba(255, 214, 109, 0.12);
+  color: var(--gold-soft);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+}
+
+body[data-theme="light"] .contact-form .field > span {
+  background:
+    linear-gradient(135deg, rgba(216, 139, 18, 0.14), rgba(216, 139, 18, 0.04)),
+    rgba(255, 248, 237, 0.94);
+}
+
+.contact-form .field input,
+.contact-form .field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  padding: 0 18px;
   border: 1px solid rgba(255, 214, 109, 0.14);
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.02));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.16);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.contact-form .field input::placeholder,
+.contact-form .field textarea::placeholder {
+  color: color-mix(in srgb, var(--text-soft) 72%, transparent);
+}
+
+.contact-form .field input:focus,
+.contact-form .field select:focus {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 4px rgba(255, 183, 60, 0.1),
+    0 16px 32px rgba(255, 174, 54, 0.1);
+}
+
+.contact-form .field select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--gold) 50%),
+    linear-gradient(135deg, var(--gold) 50%, transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025));
+  background-position:
+    calc(100% - 22px) 50%,
+    calc(100% - 16px) 50%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+  padding-right: 48px;
+}
+
+.contact-form .field select option {
+  background: #15130f;
+  color: #fff;
+}
+
+.contact-form .field textarea {
+  width: 100%;
+  min-height: 170px;
+  padding: 20px 18px;
+  border: 1px solid rgba(255, 214, 109, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.16);
   color: var(--text);
   font: inherit;
   outline: 0;
@@ -143,7 +249,7 @@ body[data-theme="light"] .contact-form-card {
     transform var(--transition);
 }
 
-.field textarea:focus {
+.contact-form .field textarea:focus {
   border-color: var(--line-strong);
   box-shadow:
     0 0 0 4px rgba(255, 183, 60, 0.08),
@@ -151,12 +257,16 @@ body[data-theme="light"] .contact-form-card {
   transform: translateY(-1px);
 }
 
-body[data-theme="light"] .field textarea {
+body[data-theme="light"] .contact-form .field input,
+body[data-theme="light"] .contact-form .field select,
+body[data-theme="light"] .contact-form .field textarea {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.56));
 }
 
 .contact-form-actions {
   display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .contact-form-status {
@@ -172,15 +282,6 @@ body[data-theme="light"] .field textarea {
   gap: 22px;
 }
 
-.contact-form .field select {
-  background-color: #111;
-  color: #fff;
-}
-
-.contact-form .field select option {
-  background-color: #111;
-  color: #fff;
-}
 .whatsapp-card {
   border-color: rgba(111, 210, 138, 0.22);
   background:
@@ -247,5 +348,31 @@ body[data-theme="light"] .field textarea {
   .map-card,
   .social-card {
     padding: 24px;
+  }
+}
+
+@media (max-width: 560px) {
+  .contact-form-card {
+    border-radius: 26px;
+  }
+
+  .contact-form-card::after {
+    inset: 10px;
+    border-radius: 20px;
+  }
+
+  .contact-form .field input,
+  .contact-form .field select {
+    min-height: 52px;
+    border-radius: 14px;
+  }
+
+  .contact-form .field textarea {
+    min-height: 150px;
+    border-radius: 14px;
+  }
+
+  .contact-form-actions .button {
+    width: 100%;
   }
 }

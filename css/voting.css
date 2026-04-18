@@ -655,34 +655,87 @@ body[data-theme="light"] .voting-hero-backdrop {
 }
 
 .voting-form-card {
-  padding: 30px;
+  position: relative;
+  overflow: hidden;
+  padding: clamp(24px, 3.4vw, 40px);
   border-color: rgba(255, 197, 66, 0.24);
+  border-radius: 34px;
   background:
-    linear-gradient(180deg, rgba(18, 18, 18, 0.86), rgba(24, 24, 24, 0.96)),
-    radial-gradient(circle at top right, rgba(255, 183, 60, 0.08), transparent 30%);
+    radial-gradient(circle at 88% 12%, rgba(255, 187, 58, 0.16), transparent 30%),
+    radial-gradient(circle at 0% 100%, rgba(255, 214, 109, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(20, 20, 20, 0.92), rgba(10, 10, 10, 0.96));
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.voting-form-card::after {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border: 1px dashed rgba(255, 214, 109, 0.12);
+  border-radius: 24px;
+  pointer-events: none;
+}
+
+.voting-form-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 body[data-theme="light"] .voting-form-card {
   background:
-    linear-gradient(180deg, rgba(255, 252, 247, 0.95), rgba(250, 243, 233, 0.98)),
-    radial-gradient(circle at top right, rgba(216, 139, 18, 0.08), transparent 30%);
+    radial-gradient(circle at 88% 12%, rgba(216, 139, 18, 0.14), transparent 30%),
+    radial-gradient(circle at 0% 100%, rgba(216, 139, 18, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(255, 252, 247, 0.96), rgba(250, 243, 233, 0.98));
 }
 
 .voting-selected {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 26px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 214, 109, 0.14);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 214, 109, 0.08), transparent 58%),
+    rgba(0, 0, 0, 0.16);
 }
 
 .voting-form {
   display: grid;
-  gap: 20px;
+  gap: 24px;
+}
+
+.voting-form-head {
+  max-width: 720px;
+}
+
+.voting-form-head h3 {
+  margin: 6px 0 10px;
+  color: var(--text);
+  font-size: clamp(1.55rem, 3vw, 2.35rem);
+  line-height: 1.05;
+}
+
+.voting-form-head p:not(.eyebrow) {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.7;
 }
 
 .phone-entry {
   display: grid;
-  grid-template-columns: minmax(120px, 170px) minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid rgba(255, 214, 109, 0.14);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 214, 109, 0.1), transparent 42%),
+    rgba(0, 0, 0, 0.14);
 }
 
 .phone-country-field select,
@@ -691,21 +744,106 @@ body[data-theme="light"] .voting-form-card {
 }
 
 .voting-form-card .field {
-  margin-bottom: 4px;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.voting-form-card .field > span {
+  background:
+    linear-gradient(135deg, rgba(255, 214, 109, 0.16), rgba(255, 214, 109, 0.06)),
+    rgba(6, 6, 6, 0.92);
+  border: 1px solid rgba(255, 214, 109, 0.12);
+  color: var(--gold-soft);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+}
+
+body[data-theme="light"] .voting-form-card .field > span {
+  background:
+    linear-gradient(135deg, rgba(216, 139, 18, 0.14), rgba(216, 139, 18, 0.04)),
+    rgba(255, 248, 237, 0.94);
+}
+
+.voting-form-card .field input,
+.voting-form-card .field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 214, 109, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.16);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.voting-form-card .field input::placeholder {
+  color: color-mix(in srgb, var(--text-soft) 72%, transparent);
+}
+
+.voting-form-card .field input:focus,
+.voting-form-card .field select:focus {
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 4px rgba(255, 183, 60, 0.1),
+    0 16px 32px rgba(255, 174, 54, 0.1);
+}
+
+.voting-form-card .field select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--gold) 50%),
+    linear-gradient(135deg, var(--gold) 50%, transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.025));
+  background-position:
+    calc(100% - 22px) 50%,
+    calc(100% - 16px) 50%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+  padding-right: 48px;
+}
+
+.voting-form-card .field select option {
+  background: #15130f;
+  color: #fff;
+}
+
+body[data-theme="light"] .voting-form-card .field input,
+body[data-theme="light"] .voting-form-card .field select {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.56));
 }
 
 .otp-actions {
   display: flex;
+  align-items: center;
 }
 
 .otp-button,
 .vote-submit-button {
-  min-width: 190px;
+  min-width: min(100%, 240px);
+  box-shadow: 0 18px 42px rgba(255, 174, 54, 0.16);
 }
 
 .otp-section {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
+  align-items: end;
+  padding: 18px;
+  border: 1px solid rgba(255, 214, 109, 0.14);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 214, 109, 0.1), transparent 42%),
+    rgba(0, 0, 0, 0.14);
 }
 
 .otp-section.is-hidden {
@@ -726,6 +864,29 @@ body[data-theme="light"] .voting-form-card {
   margin: 0;
   color: var(--text-soft);
   transition: color 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#voting-rules-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: auto;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 214, 109, 0.14);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+#voting-rules-text::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 18px rgba(255, 187, 58, 0.55);
 }
 
 .vote-status.is-error {
@@ -866,14 +1027,42 @@ body[data-theme="light"] .voting-form-card {
     padding: 24px;
   }
 
+  .voting-selected {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .leaderboard-table {
     min-width: 880px;
   }
 }
 
 @media (max-width: 560px) {
-  .phone-entry {
+  .phone-entry,
+  .otp-section {
     grid-template-columns: 1fr;
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .voting-form-card {
+    border-radius: 26px;
+  }
+
+  .voting-form-card::after {
+    inset: 10px;
+    border-radius: 20px;
+  }
+
+  .voting-form-card .field input,
+  .voting-form-card .field select {
+    min-height: 52px;
+    border-radius: 14px;
+  }
+
+  #voting-rules-text {
+    width: 100%;
+    align-items: flex-start;
   }
 
   .contestant-vote-grid {
