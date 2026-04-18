@@ -14,8 +14,8 @@ body.register-page .site-shell,
 body.register-page main {
   min-height: 100dvh;
   max-width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow-x: clip;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -45,6 +45,20 @@ body[data-theme="light"] .register-hero-backdrop {
 
 .register-hero-content {
   align-items: center;
+}
+
+.register-main.reveal.is-visible,
+.register-side.reveal.is-visible {
+  transform: none;
+}
+
+.register-layout,
+.register-main,
+.registration-card,
+.registration-form {
+  min-width: 0;
+  max-width: 100%;
+  touch-action: pan-y;
 }
 
 .register-side {
