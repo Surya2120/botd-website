@@ -200,6 +200,8 @@ body[data-theme="light"] .register-note-card {
     linear-gradient(180deg, rgba(18, 18, 18, 0.88), rgba(24, 24, 24, 0.96)),
     radial-gradient(circle at top right, rgba(255, 183, 60, 0.08), transparent 28%);
   overflow: visible;
+  transform: none !important;
+  transform-style: flat;
   box-shadow:
     var(--shadow),
     0 0 0 1px rgba(255, 197, 66, 0.08),

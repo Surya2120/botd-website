@@ -96,7 +96,7 @@ const hero = document.querySelector(".hero");
 const cinematicScenes = document.querySelectorAll(".cinematic-scene");
 const parallaxLayers = document.querySelectorAll(".poster-card");
 const interactiveCards = document.querySelectorAll(
-  ".highlight-card, .glass-card, .concept-card, .step-card, .vote-card, .category-card, .benefit-card, .cta-panel, .instruction-card, .contact-info-card, .sponsor-logo-card, .founder-card, .contact-form-card, .registration-card, .voting-form-card, .title-sponsor-banner, .powered-sponsor-card, .season-banner"
+  ".highlight-card, .glass-card, .concept-card, .step-card, .vote-card, .category-card, .benefit-card, .cta-panel, .instruction-card, .contact-info-card, .sponsor-logo-card, .founder-card, .title-sponsor-banner, .powered-sponsor-card, .season-banner"
 );
 const revealItems = document.querySelectorAll(".reveal");
 const registrationForm = document.getElementById("registration-form");
@@ -1606,7 +1606,10 @@ function setupHeroParallax() {
 }
 
 function setupInteractiveCards() {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    || !window.matchMedia("(hover: hover) and (pointer: fine)").matches
+  ) {
     return;
   }
 
