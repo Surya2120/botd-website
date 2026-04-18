@@ -175,11 +175,13 @@ body[data-theme="light"] .register-note-card {
     0 0 38px rgba(255, 174, 54, 0.08);
 }
 
-.registration-card:hover {
-  box-shadow:
-    var(--shadow),
-    0 0 0 1px rgba(255, 197, 66, 0.12),
-    0 0 54px rgba(255, 174, 54, 0.14);
+@media (hover: hover) and (pointer: fine) {
+  .registration-card:hover {
+    box-shadow:
+      var(--shadow),
+      0 0 0 1px rgba(255, 197, 66, 0.12),
+      0 0 54px rgba(255, 174, 54, 0.14);
+  }
 }
 
 body[data-theme="light"] .registration-card {
@@ -460,13 +462,22 @@ body[data-theme="light"] .field select {
   pointer-events: none;
 }
 
-.upload-field:hover,
 .upload-field:focus-within {
   border-color: var(--line-strong);
   box-shadow:
     0 0 0 1px rgba(255, 197, 66, 0.12),
     0 18px 34px rgba(255, 174, 54, 0.08);
   transform: translateY(-2px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .upload-field:hover {
+    border-color: var(--line-strong);
+    box-shadow:
+      0 0 0 1px rgba(255, 197, 66, 0.12),
+      0 18px 34px rgba(255, 174, 54, 0.08);
+    transform: translateY(-2px);
+  }
 }
 
 .upload-label {
@@ -943,18 +954,6 @@ body[data-theme="light"] .field select {
     padding: 22px;
   }
 }
-
-
-
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("registration-form");
-
-  if (form?.dataset.registrationClosed === "true") {
-    form.querySelectorAll("input, select, textarea, button").forEach(el => {
-      el.disabled = true;
-    });
-  }
-});
 .registration-form.is-disabled input,
 .registration-form.is-disabled select,
 .registration-form.is-disabled textarea {

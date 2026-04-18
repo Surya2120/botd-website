@@ -1,29 +1,26 @@
 import {
   collection,
   doc,
+  getDoc,
   onSnapshot,
+  query,
   runTransaction,
   serverTimestamp,
+  where,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-import {
-  get,
-  increment as realtimeIncrement,
-  onValue,
-  ref as realtimeRef,
-  update as realtimeUpdate,
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-import { db, realtimeDb } from "./firebase.js";
+import { db } from "./firebase.js";
 
-const CONTESTANTS_PATH = "contestants";
+const TEAMS_COLLECTION = "teams";
 
-function normalizeContestant(id, value = {}) {
-  const visible = value.visible ?? value.isVisible ?? true;
+function normalizeTeam(id, value = {}) {
+  const isVisible = value.isVisible ?? value.visible ?? true;
   const approved = value.approved ?? true;
 
   return {
     ...value,
     id,
-    visible: visible !== false,
+    isVisible: isVisible !== false,
+    visible: isVisible !== false,
     approved: approved !== false,
     categoryId: value.categoryId || value.category || "",
     votes: Number(value.votes || 0),
@@ -35,14 +32,11 @@ function normalizePhoneKey(phoneNumber) {
 }
 
 export function subscribeTeams(onData, onError) {
-  const contestantsRef = realtimeRef(realtimeDb, CONTESTANTS_PATH);
-
-  return onValue(
-    contestantsRef,
+  return onSnapshot(
+    query(collection(db, TEAMS_COLLECTION), where("isVisible", "==", true)),
     (snapshot) => {
-      const value = snapshot.val() || {};
-      const items = Object.entries(value)
-        .map(([id, contestant]) => normalizeContestant(id, contestant))
+      const items = snapshot.docs
+        .map((docItem) => normalizeTeam(docItem.id, docItem.data()))
         .sort((left, right) => {
           const orderDifference = Number(left.sortOrder || 0) - Number(right.sortOrder || 0);
           if (orderDifference !== 0) return orderDifference;
@@ -70,14 +64,14 @@ export function subscribeVoteTallies(onData, onError) {
 }
 
 export async function submitVote({ participantId, userId, phoneNumber, deviceId }) {
-  const contestantSnap = await get(realtimeRef(realtimeDb, `${CONTESTANTS_PATH}/${participantId}`));
-  if (!contestantSnap.exists()) {
+  const teamSnap = await getDoc(doc(db, TEAMS_COLLECTION, participantId));
+  if (!teamSnap.exists() || teamSnap.data()?.isVisible === false) {
     throw new Error("Selected contestant does not exist.");
   }
 
   await runTransaction(db, async (transaction) => {
     const voteDocRef = doc(db, "votes", participantId);
-    const teamRef = doc(db, "teams", participantId);
+    const teamRef = doc(db, TEAMS_COLLECTION, participantId);
     const seasonVoteRef = doc(db, "seasonVotes", userId);
     const deviceVoteRef = deviceId ? doc(db, "seasonVoteDevices", deviceId) : null;
     const phoneVoteRef = normalizePhoneKey(phoneNumber) ? doc(db, "seasonVotePhones", normalizePhoneKey(phoneNumber)) : null;
@@ -146,7 +140,4 @@ export async function submitVote({ participantId, userId, phoneNumber, deviceId 
     }, { merge: true });
   });
 
-  await realtimeUpdate(realtimeRef(realtimeDb, `${CONTESTANTS_PATH}/${participantId}`), {
-    votes: realtimeIncrement(1),
-  });
 }

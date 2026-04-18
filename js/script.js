@@ -820,11 +820,28 @@ function normalizeLeaderboardCategory(value) {
     .replace(/[_\s]+/g, "-");
 
   if (!input) return "";
+  if (input === "ag" || input === "adult-groups" || input === "adult-group" || input === "adultgroup") return "adult-group";
+  if (input === "kg" || input === "kids-groups" || input === "kids-group" || input === "kidsgroup") return "kids-group";
+  if (input === "ks" || input === "kids-solos" || input === "kids-solo" || input === "kidssolo") return "kids-solo";
+  if (input === "os" || input === "open-solos" || input === "open-solo" || input === "opensolo") return "open-solo";
   if (input === "adult-group" || input === "adultgroup") return "adult-group";
   if (input === "kids-group" || input === "kidsgroup") return "kids-group";
   if (input === "kids-solo" || input === "kidssolo") return "kids-solo";
   if (input === "open-solo" || input === "opensolo") return "open-solo";
   return input;
+}
+
+function getCategoryCode(category = {}) {
+  return String(category.code || category.id || category.name || "").trim();
+}
+
+function categoryMatchesTeam(team, category) {
+  const teamCategory = normalizeLeaderboardCategory(team.categoryId || team.category);
+  const categoryCode = String(category.code || "").trim().toUpperCase();
+  const categoryId = normalizeLeaderboardCategory(category.id || category.name || category.code);
+  const rawTeamCategory = String(team.categoryId || team.category || "").trim().toUpperCase();
+
+  return teamCategory === categoryId || (categoryCode && rawTeamCategory === categoryCode);
 }
 
 function renderLeaderboard() {
@@ -1090,21 +1107,23 @@ function renderSeasonContestants() {
     return;
   }
 
-  const activeCode = String(activeCategories[0].code || "").toUpperCase();
+  const activeCode = normalizeLeaderboardCategory(getCategoryCode(activeCategories[0]));
 
   host.innerHTML = `
     <div class="tab-list" role="tablist" aria-label="Contestant categories">
       ${activeCategories.map((category, index) => {
-        const code = String(category.code || "").toUpperCase();
-        const count = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && isPublicContestant(team)).length;
-        return `<button class="tab-button ${index === 0 ? "is-active" : ""}" type="button" role="tab" aria-selected="${index === 0}" data-tab-target="${code.toLowerCase()}">${category.name || code} (${count})</button>`;
+        const code = getCategoryCode(category);
+        const target = normalizeLeaderboardCategory(code);
+        const count = liveVotingTeams.filter((team) => categoryMatchesTeam(team, category) && isPublicContestant(team)).length;
+        return `<button class="tab-button ${index === 0 ? "is-active" : ""}" type="button" role="tab" aria-selected="${index === 0}" data-tab-target="${target}">${category.name || code} (${count})</button>`;
       }).join("")}
     </div>
     ${activeCategories.map((category, index) => {
-      const code = String(category.code || "").toUpperCase();
-      const teams = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && isPublicContestant(team));
+      const code = getCategoryCode(category);
+      const target = normalizeLeaderboardCategory(code);
+      const teams = liveVotingTeams.filter((team) => categoryMatchesTeam(team, category) && isPublicContestant(team));
       return `
-        <div class="tab-panel ${code === activeCode && index === 0 ? "is-active" : ""}" id="${code.toLowerCase()}" role="tabpanel">
+        <div class="tab-panel ${target === activeCode && index === 0 ? "is-active" : ""}" id="${target}" role="tabpanel">
           <p class="contestant-meta">${teams.length ? `${teams.length} contestants available in ${category.name || code}.` : "Contestants will be announcing soon."}</p>
           <div class="contestant-grid">
             ${teams.map((team) => `
@@ -2842,7 +2861,7 @@ function getFriendlyOtpVerificationMessage(error) {
 
 function getActiveVotingCategoryCode() {
   const activeButton = document.querySelector(".vote-tab-button.is-active");
-  return String(activeButton?.dataset.voteTarget || "").toUpperCase();
+  return normalizeLeaderboardCategory(activeButton?.dataset.voteTarget || "");
 }
 
 function isPhoneEntryValid(countryCode, localPhoneNumber) {
@@ -2924,23 +2943,25 @@ function renderVotingShell() {
     return;
   }
 
-  let activeCode = getActiveVotingCategoryCode() || String(activeCategories[0].code || "").toUpperCase();
-  if (!activeCategories.some((item) => String(item.code || "").toUpperCase() === activeCode)) {
-    activeCode = String(activeCategories[0].code || "").toUpperCase();
+  let activeCode = getActiveVotingCategoryCode() || normalizeLeaderboardCategory(getCategoryCode(activeCategories[0]));
+  if (!activeCategories.some((item) => normalizeLeaderboardCategory(getCategoryCode(item)) === activeCode)) {
+    activeCode = normalizeLeaderboardCategory(getCategoryCode(activeCategories[0]));
   }
 
   tabList.innerHTML = activeCategories.map((category) => {
-    const code = String(category.code || "").toUpperCase();
-    const isActive = code === activeCode;
-    return `<button class="vote-tab-button ${isActive ? "is-active" : ""}" type="button" role="tab" aria-selected="${isActive}" data-vote-target="${code.toLowerCase()}">${category.name || code}</button>`;
+    const code = getCategoryCode(category);
+    const target = normalizeLeaderboardCategory(code);
+    const isActive = target === activeCode;
+    return `<button class="vote-tab-button ${isActive ? "is-active" : ""}" type="button" role="tab" aria-selected="${isActive}" data-vote-target="${target}">${category.name || code}</button>`;
   }).join("");
 
   panelHost.innerHTML = activeCategories.map((category) => {
-    const code = String(category.code || "").toUpperCase();
-    const isActive = code === activeCode;
-    const teams = liveVotingTeams.filter((team) => String(team.categoryId || "").toUpperCase() === code && isPublicContestant(team));
+    const code = getCategoryCode(category);
+    const target = normalizeLeaderboardCategory(code);
+    const isActive = target === activeCode;
+    const teams = liveVotingTeams.filter((team) => categoryMatchesTeam(team, category) && isPublicContestant(team));
     return `
-      <div class="vote-tab-panel ${isActive ? "is-active" : ""}" id="${code.toLowerCase()}" role="tabpanel">
+      <div class="vote-tab-panel ${isActive ? "is-active" : ""}" id="${target}" role="tabpanel">
         <div class="contestant-vote-grid">
           ${teams.length ? teams.map((team) => `
             <article class="vote-card-item${votingUiState.selectedTeamId === team.id ? " is-selected" : ""}${getVoteAnimationClass(team.id, getVoteCountForTeam(team.id))}" data-team-id="${team.id}" data-contestant="${team.name}">
