@@ -946,11 +946,18 @@ body[data-theme="light"] .registration-card-disabled {
 
 .registration-form.is-disabled .field,
 .registration-form.is-disabled .upload-field,
+.registration-form .upload-field.is-disabled,
 .registration-form.is-disabled .consent-check,
 .registration-form.is-disabled .payment-panel,
 .registration-form.is-disabled .terms-embed-copy {
   filter: grayscale(1);
   cursor: not-allowed;
+}
+
+.registration-form.is-disabled .upload-field,
+.registration-form .upload-field.is-disabled {
+  pointer-events: none;
+  opacity: 0.62;
 }
 
 .registration-form.is-disabled input,

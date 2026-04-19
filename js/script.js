@@ -119,7 +119,7 @@ let liveVoteTallies = {};
 let liveUiControls = {
   showVotes: false,
   showLeaderboard: true,
-  registrationOpen: true,
+  registrationOpen: false,
   showInterestButton: true,
   showRules: true,
   registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
@@ -2311,6 +2311,8 @@ function setupRegistrationForm() {
   const heroStatus = document.getElementById("registration-hero-status");
   const heroCopy = document.getElementById("registration-hero-copy") || document.querySelector(".register-hero-highlight p");
   const allControls = Array.from(registrationForm.querySelectorAll("input, select, textarea, button"));
+  const uploadInputs = [videoInput, audioInput, photoInput].filter(Boolean);
+  const uploadLabels = Array.from(registrationForm.querySelectorAll(".upload-field"));
   let registrationOpen = !defaultClosed;
 
   function setInterestStatus(message, tone) {
@@ -2368,6 +2370,15 @@ function setupRegistrationForm() {
     wrapper?.classList.toggle("is-success", hasFile && !validationMessage);
     wrapper?.classList.toggle("is-error", Boolean(forceValidate || input.required) && Boolean(validationMessage));
     input.setCustomValidity(validationMessage);
+  }
+
+  function clearUploadState(input, label) {
+    if (!input) {
+      return;
+    }
+
+    input.value = "";
+    updateUploadState(input, label);
   }
 
   function getUploadValidationMessage(input) {
@@ -2524,6 +2535,15 @@ function setupRegistrationForm() {
       control.disabled = !registrationOpen;
     });
 
+    uploadLabels.forEach((label) => {
+      label.classList.toggle("is-disabled", !registrationOpen);
+      label.setAttribute("aria-disabled", String(!registrationOpen));
+    });
+
+    uploadInputs.forEach((input) => {
+      input.disabled = !registrationOpen;
+    });
+
     if (heroStatus) {
       heroStatus.textContent = registrationOpen ? "REGISTRATION IS LIVE" : closedMessage;
     }
@@ -2545,6 +2565,9 @@ function setupRegistrationForm() {
     }
 
     if (!registrationOpen) {
+      clearUploadState(videoInput, videoName);
+      clearUploadState(audioInput, audioName);
+      clearUploadState(photoInput, photoName);
       successMessage?.classList.add("is-hidden");
       setUploadProgress(0);
       setStatus("Registration is currently disabled.", "");
@@ -2879,9 +2902,39 @@ function setupRegistrationForm() {
     syncGroupFields();
     syncSubmitState();
   });
-  videoInput?.addEventListener("change", () => updateUploadState(videoInput, videoName, true));
-  audioInput?.addEventListener("change", () => updateUploadState(audioInput, audioName, true));
-  photoInput?.addEventListener("change", () => updateUploadState(photoInput, photoName, true));
+  videoInput?.addEventListener("change", () => {
+    if (!registrationOpen) {
+      clearUploadState(videoInput, videoName);
+      return;
+    }
+
+    updateUploadState(videoInput, videoName, true);
+  });
+  audioInput?.addEventListener("change", () => {
+    if (!registrationOpen) {
+      clearUploadState(audioInput, audioName);
+      return;
+    }
+
+    updateUploadState(audioInput, audioName, true);
+  });
+  photoInput?.addEventListener("change", () => {
+    if (!registrationOpen) {
+      clearUploadState(photoInput, photoName);
+      return;
+    }
+
+    updateUploadState(photoInput, photoName, true);
+  });
+  uploadLabels.forEach((label) => {
+    label.addEventListener("click", (event) => {
+      if (!registrationOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        setStatus("Registration is currently disabled.", "");
+      }
+    }, true);
+  });
   participantConsentInput?.addEventListener("change", syncConsentState);
   guardianConsentInput?.addEventListener("change", syncConsentState);
   termsCollapseToggle?.addEventListener("click", () => syncTermsCollapse());
