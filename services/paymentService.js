@@ -1,12 +1,23 @@
 function getPaymentApiBase() {
-  if (window.BOTD_CASHFREE_API_BASE) {
-    return window.BOTD_CASHFREE_API_BASE;
+  const configuredBase = String(window.BOTD_CASHFREE_API_BASE || "").trim().replace(/\/+$/, "");
+
+  if (configuredBase) {
+    return configuredBase;
   }
 
   const { hostname, port } = window.location;
   const isLocalStaticServer = ["127.0.0.1", "localhost"].includes(hostname) && port && port !== "3000";
+  const isStaticProductionHost = hostname.endsWith("github.io") || hostname.endsWith("pages.dev") || hostname.endsWith("netlify.app");
 
-  return isLocalStaticServer ? "http://localhost:3000/api/cashfree" : "/api/cashfree";
+  if (isLocalStaticServer) {
+    return "http://localhost:3000/api/cashfree";
+  }
+
+  if (isStaticProductionHost) {
+    return "";
+  }
+
+  return "/api/cashfree";
 }
 
 const PAYMENT_API_BASE = getPaymentApiBase();
@@ -38,6 +49,10 @@ async function parseJsonResponse(response, fallbackMessage) {
 export async function loadCashfreeConfig() {
   if (cachedCashfreeConfig?.appId) {
     return cachedCashfreeConfig;
+  }
+
+  if (!PAYMENT_API_BASE) {
+    throw new Error("Cashfree backend URL is not configured for this hosted website.");
   }
 
   const response = await fetch(`${PAYMENT_API_BASE}/config`, {
@@ -101,6 +116,10 @@ export async function createCashfreeOrder(registrationPayload = {}) {
 }
 
 export async function verifyCashfreeOrder(orderId) {
+  if (!PAYMENT_API_BASE) {
+    throw new Error("Cashfree backend URL is not configured for this hosted website.");
+  }
+
   const response = await fetch(`${PAYMENT_API_BASE}/verify-order`, {
     method: "POST",
     headers: {

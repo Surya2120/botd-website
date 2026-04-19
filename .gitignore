@@ -6,3 +6,5 @@ build/
 *.mp4
 *.psd
 .env
+.env.local
+.DS_Store

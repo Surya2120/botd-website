@@ -2780,7 +2780,13 @@ function setupRegistrationForm() {
       orderContext = await createCashfreeOrder(collectFormData());
     } catch (error) {
       console.error("[BOTD] Cashfree bootstrap failed", error);
-      setStatus("Payment could not start. Please try again.", "is-error");
+      const paymentSetupMissing = String(error?.message || "").toLowerCase().includes("backend url");
+      setStatus(
+        paymentSetupMissing
+          ? "Payment server is not connected yet. Please contact BOTD support."
+          : "Payment could not start. Please try again.",
+        "is-error"
+      );
       setButtonLoading(payButton, false, "Register & Continue Payment");
       syncSubmitState();
       return;

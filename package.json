@@ -1,12 +1,11 @@
 {
   "name": "botd_website",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "BOTD website backend for Cashfree payment verification.",
+  "main": "server.js",
   "scripts": {
-    "dev": "node server.js",
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -21,11 +20,9 @@
   },
   "homepage": "https://github.com/Surya2120/botd-website#readme",
   "dependencies": {
-    "@capacitor/android": "^8.3.0",
-    "@capacitor/cli": "^8.3.0",
-    "@capacitor/core": "^8.3.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "razorpay": "^2.9.6"
+    "node-fetch": "^2.7.0"
   }
 }

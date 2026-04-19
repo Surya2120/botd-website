@@ -1,10 +1,12 @@
 const crypto = require("crypto");
 const path = require("path");
 const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch");
 require("dotenv").config();
 
 const app = express();
-const PORT = Number(process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
 
 const {
   CASHFREE_APP_ID = "",
@@ -19,23 +21,21 @@ const {
 const CASHFREE_BASE_URL = CASHFREE_ENVIRONMENT === "production"
   ? "https://api.cashfree.com/pg"
   : "https://sandbox.cashfree.com/pg";
-const ALLOWED_ORIGINS = String(CORS_ORIGIN || "")
+
+const allowedOrigins = CORS_ORIGIN
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+const verifiedOrders = new Set();
+const verifyingOrders = new Set();
 
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function validatePaymentCredentials() {
-  if (!isNonEmptyString(CASHFREE_APP_ID) || !isNonEmptyString(CASHFREE_SECRET_KEY)) {
-    throw new Error("Cashfree credentials are missing. Set CASHFREE_APP_ID and CASHFREE_SECRET_KEY.");
-  }
-}
-
-function sanitizeOrderIdPart(value, fallback) {
-  return String(value || fallback || "botd")
+function sanitizeOrderIdPart(value, fallback = "botd") {
+  return String(value || fallback)
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, "_")
     .replace(/^_+|_+$/g, "")
@@ -44,16 +44,31 @@ function sanitizeOrderIdPart(value, fallback) {
 
 function createOrderId(seedValue) {
   const token = crypto.randomBytes(4).toString("hex");
-  const stamp = Date.now();
-  return `botd_${sanitizeOrderIdPart(seedValue, "registration")}_${stamp}_${token}`.slice(0, 45);
+  return `botd_${sanitizeOrderIdPart(seedValue, "registration")}_${Date.now()}_${token}`.slice(0, 45);
 }
 
-function isPaidCashfreeStatus(value) {
-  return ["PAID", "SUCCESS", "SUCCESSFUL", "COMPLETED"].includes(String(value || "").toUpperCase());
+function validateCashfreeCredentials() {
+  if (!isNonEmptyString(CASHFREE_APP_ID) || !isNonEmptyString(CASHFREE_SECRET_KEY)) {
+    throw new Error("Cashfree credentials are not configured.");
+  }
+}
+
+function getPublicBaseUrl(request) {
+  const protocol = request.headers["x-forwarded-proto"] || request.protocol;
+  const host = request.headers["x-forwarded-host"] || request.get("host");
+  return `${protocol}://${host}`;
+}
+
+async function readJsonResponse(response) {
+  try {
+    return await response.json();
+  } catch (error) {
+    return {};
+  }
 }
 
 async function callCashfree(endpoint, options = {}) {
-  validatePaymentCredentials();
+  validateCashfreeCredentials();
 
   const response = await fetch(`${CASHFREE_BASE_URL}${endpoint}`, {
     ...options,
@@ -68,12 +83,7 @@ async function callCashfree(endpoint, options = {}) {
     },
   });
 
-  let payload = {};
-  try {
-    payload = await response.json();
-  } catch (error) {
-    payload = {};
-  }
+  const payload = await readJsonResponse(response);
 
   if (!response.ok) {
     throw new Error(payload?.message || payload?.type || "Cashfree API request failed.");
@@ -82,48 +92,68 @@ async function callCashfree(endpoint, options = {}) {
   return payload;
 }
 
-app.use((request, response, next) => {
-  const requestOrigin = request.headers.origin;
-  const allowedOrigin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0];
+function parseAmount(value) {
+  const amount = Number(value || CASHFREE_AMOUNT || 99);
+  return Number.isFinite(amount) ? amount : 99;
+}
 
-  if (isNonEmptyString(allowedOrigin)) {
-    response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
-    response.setHeader("Vary", "Origin");
-  }
+app.disable("x-powered-by");
 
-  response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type,Accept");
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
 
-  if (request.method === "OPTIONS") {
-    return response.sendStatus(204);
-  }
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-  return next();
-});
+    return callback(new Error("Origin is not allowed by BOTD payment server."));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Accept"],
+}));
 
 app.use(express.json({ limit: "256kb" }));
 app.use(express.static(__dirname));
 
+app.get("/api/health", (request, response) => {
+  response.json({
+    success: true,
+    service: "BOTD Cashfree backend",
+    environment: CASHFREE_ENVIRONMENT === "production" ? "production" : "sandbox",
+  });
+});
+
 app.get("/api/cashfree/config", (request, response) => {
-  if (!isNonEmptyString(CASHFREE_APP_ID)) {
+  try {
+    if (!isNonEmptyString(CASHFREE_APP_ID)) {
+      return response.status(500).json({
+        success: false,
+        message: "Payment server is not configured.",
+      });
+    }
+
+    return response.json({
+      success: true,
+      appId: CASHFREE_APP_ID,
+      mode: CASHFREE_ENVIRONMENT === "production" ? "production" : "sandbox",
+      amount: parseAmount(CASHFREE_AMOUNT),
+      currency: CASHFREE_CURRENCY || "INR",
+    });
+  } catch (error) {
+    console.error("[BOTD] Cashfree config failed", error);
     return response.status(500).json({
       success: false,
-      message: "CASHFREE_APP_ID is not configured on the server.",
+      message: "Unable to load payment configuration.",
     });
   }
-
-  return response.json({
-    success: true,
-    appId: CASHFREE_APP_ID,
-    mode: CASHFREE_ENVIRONMENT === "production" ? "production" : "sandbox",
-    amount: Number(CASHFREE_AMOUNT || 99),
-    currency: CASHFREE_CURRENCY || "INR",
-  });
 });
 
 app.post("/api/cashfree/create-order", async (request, response) => {
   try {
-    const amount = Number(request.body?.orderAmount || CASHFREE_AMOUNT || 99);
+    const amount = parseAmount(request.body?.orderAmount);
     const currency = String(request.body?.currency || CASHFREE_CURRENCY || "INR").trim().toUpperCase();
     const name = String(request.body?.name || "").trim();
     const email = String(request.body?.email || "").trim();
@@ -133,31 +163,38 @@ app.post("/api/cashfree/create-order", async (request, response) => {
     if (!Number.isFinite(amount) || amount < 1) {
       return response.status(400).json({
         success: false,
-        message: "Invalid Cashfree order amount.",
+        message: "Invalid payment amount.",
+      });
+    }
+
+    if (phone && phone.length < 6) {
+      return response.status(400).json({
+        success: false,
+        message: "Invalid phone number.",
       });
     }
 
     const orderId = createOrderId(name || email || phone);
-    const resolvedReturnUrl = returnUrl ? returnUrl.replaceAll("{order_id}", orderId) : "";
-    const orderPayload = {
-      order_id: orderId,
-      order_amount: Number(amount.toFixed(2)),
-      order_currency: currency,
-      customer_details: {
-        customer_id: sanitizeOrderIdPart(email || phone || name || orderId, "customer"),
-        customer_name: name || "BOTD User",
-        customer_email: email || "support@botd.in",
-        customer_phone: phone || "9999999999",
-      },
-      order_meta: {
-        return_url: resolvedReturnUrl || `${request.protocol}://${request.get("host")}/register.html?cashfree_order_id=${orderId}`,
-      },
-      order_note: "BOTD registration payment",
-    };
+    const fallbackReturnUrl = `${getPublicBaseUrl(request)}/register.html?cashfree_order_id=${orderId}`;
+    const resolvedReturnUrl = returnUrl ? returnUrl.replaceAll("{order_id}", orderId) : fallbackReturnUrl;
 
     const cashfreeOrder = await callCashfree("/orders", {
       method: "POST",
-      body: JSON.stringify(orderPayload),
+      body: JSON.stringify({
+        order_id: orderId,
+        order_amount: Number(amount.toFixed(2)),
+        order_currency: currency,
+        customer_details: {
+          customer_id: sanitizeOrderIdPart(email || phone || name || orderId, "customer"),
+          customer_name: name || "BOTD User",
+          customer_email: email || "support@botd.in",
+          customer_phone: phone || "9999999999",
+        },
+        order_meta: {
+          return_url: resolvedReturnUrl,
+        },
+        order_note: "BOTD registration payment",
+      }),
     });
 
     return response.json({
@@ -173,48 +210,49 @@ app.post("/api/cashfree/create-order", async (request, response) => {
     console.error("[BOTD] Cashfree create-order failed", error);
     return response.status(500).json({
       success: false,
-      message: error.message || "Unable to create Cashfree order.",
+      message: "Unable to create payment order. Please try again.",
     });
   }
 });
 
 app.post("/api/cashfree/verify-order", async (request, response) => {
-  try {
-    const orderId = String(request.body?.orderId || "").trim();
+  const orderId = String(request.body?.orderId || "").trim();
 
+  try {
     if (!isNonEmptyString(orderId)) {
       return response.status(400).json({
         success: false,
         verified: false,
-        message: "Missing Cashfree order ID.",
+        message: "Missing payment order ID.",
       });
     }
+
+    if (verifiedOrders.has(orderId)) {
+      return response.json({
+        success: true,
+        verified: true,
+        duplicate: true,
+        orderId,
+        orderStatus: "PAID",
+        message: "Payment already verified.",
+      });
+    }
+
+    if (verifyingOrders.has(orderId)) {
+      return response.status(409).json({
+        success: false,
+        verified: false,
+        message: "Payment verification is already in progress.",
+      });
+    }
+
+    verifyingOrders.add(orderId);
 
     const order = await callCashfree(`/orders/${encodeURIComponent(orderId)}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
 
-    let payments = [];
-    try {
-      const paymentResponse = await callCashfree(`/orders/${encodeURIComponent(orderId)}/payments`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      payments = Array.isArray(paymentResponse) ? paymentResponse : [];
-    } catch (paymentError) {
-      console.warn("[BOTD] Cashfree payment detail lookup failed", paymentError.message);
-      payments = [];
-    }
-
-    const successfulPayment = payments.find((payment) => isPaidCashfreeStatus(payment?.payment_status));
-    const verified = isPaidCashfreeStatus(order?.order_status) || Boolean(successfulPayment);
-
-    if (!verified) {
+    if (String(order?.order_status || "").toUpperCase() !== "PAID") {
       return response.status(400).json({
         success: false,
         verified: false,
@@ -224,26 +262,58 @@ app.post("/api/cashfree/verify-order", async (request, response) => {
       });
     }
 
+    let successfulPayment = null;
+
+    try {
+      const payments = await callCashfree(`/orders/${encodeURIComponent(orderId)}/payments`, {
+        method: "GET",
+      });
+      successfulPayment = Array.isArray(payments)
+        ? payments.find((payment) => String(payment?.payment_status || "").toUpperCase() === "SUCCESS")
+        : null;
+    } catch (paymentError) {
+      console.warn("[BOTD] Cashfree payment details lookup failed", paymentError.message);
+    }
+
+    verifiedOrders.add(orderId);
+
     return response.json({
       success: true,
       verified: true,
+      duplicate: false,
       orderId: order.order_id,
       cfOrderId: order.cf_order_id,
       orderStatus: order.order_status,
       paymentId: successfulPayment?.cf_payment_id || "",
-      amount: successfulPayment?.payment_amount || order.order_amount || Number(CASHFREE_AMOUNT || 99),
+      amount: successfulPayment?.payment_amount || order.order_amount || parseAmount(CASHFREE_AMOUNT),
       currency: order.order_currency || CASHFREE_CURRENCY || "INR",
       paymentTime: successfulPayment?.payment_completion_time || successfulPayment?.payment_time || new Date().toISOString(),
       paymentDetails: successfulPayment || null,
     });
   } catch (error) {
-    console.error("[BOTD] Cashfree order verification failed", error);
+    console.error("[BOTD] Cashfree verify-order failed", error);
     return response.status(500).json({
       success: false,
       verified: false,
-      message: error.message || "Unable to verify Cashfree order.",
+      message: "Unable to verify payment. Please try again.",
     });
+  } finally {
+    if (orderId) {
+      verifyingOrders.delete(orderId);
+    }
   }
+});
+
+app.use((error, request, response, next) => {
+  if (response.headersSent) {
+    return next(error);
+  }
+
+  console.error("[BOTD] Server error", error);
+  return response.status(500).json({
+    success: false,
+    message: "Something went wrong. Please try again.",
+  });
 });
 
 app.get("*", (request, response) => {
@@ -251,5 +321,5 @@ app.get("*", (request, response) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`[BOTD] Server running at http://localhost:${PORT}`);
+  console.log(`[BOTD] Server running on port ${PORT}`);
 });
