@@ -5,19 +5,7 @@ function getPaymentApiBase() {
     return configuredBase;
   }
 
-  const { hostname, port } = window.location;
-  const isLocalStaticServer = ["127.0.0.1", "localhost"].includes(hostname) && port && port !== "3000";
-  const isStaticProductionHost = hostname.endsWith("github.io") || hostname.endsWith("pages.dev") || hostname.endsWith("netlify.app");
-
-  if (isLocalStaticServer) {
-    return "http://localhost:3000/api/cashfree";
-  }
-
-  if (isStaticProductionHost) {
-    return "";
-  }
-
-  return "/api/cashfree";
+  return "";
 }
 
 const PAYMENT_API_BASE = getPaymentApiBase();
