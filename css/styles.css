@@ -2538,9 +2538,11 @@ body[data-theme="light"] .section-alt::before {
 }
 
 .button[disabled],
+.button.is-disabled,
 .button.is-loading,
 .theme-toggle[disabled],
 .menu-toggle[disabled] {
+  pointer-events: none;
   cursor: not-allowed;
   opacity: 0.72;
   transform: none;

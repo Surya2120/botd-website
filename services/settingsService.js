@@ -44,6 +44,7 @@ export async function ensureSettingsDocument() {
       showLeaderboard: true,
       registrationOpen: true,
       showInterestButton: true,
+      showRules: true,
       registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
       updatedAt: serverTimestamp(),
     },
@@ -69,6 +70,7 @@ export function subscribeUiControls(onData, onError) {
         showLeaderboard: true,
         registrationOpen: true,
         showInterestButton: true,
+        showRules: true,
         registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
       });
     },
@@ -94,6 +96,7 @@ export function subscribeVoteVisibility(onData, onError) {
       showLeaderboard: Boolean(data?.showLeaderboard),
       registrationOpen: data?.registrationOpen !== false,
       showInterestButton: data?.showInterestButton !== false,
+      showRules: data?.showRules !== false,
       registrationClosedMessage: data?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL",
     }),
     onError

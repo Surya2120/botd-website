@@ -121,6 +121,7 @@ let liveUiControls = {
   showLeaderboard: true,
   registrationOpen: true,
   showInterestButton: true,
+  showRules: true,
   registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
 };
 let currentVoteConfirmation = null;
@@ -286,6 +287,25 @@ function applyRulesContent(content) {
   setElementText("season-rules-title", content.title);
   renderRulesLayout(content.content);
   setElementHref("season-rulebook-link", content.rulebookUrl);
+}
+
+function applyRulesVisibility(showRules = true) {
+  const isVisible = showRules !== false;
+  const rulesAccordion = document.getElementById("season-rules-accordion");
+  const rulebookAccordion = document.getElementById("season-rulebook-accordion");
+  const rulebookLink = document.getElementById("season-rulebook-link");
+
+  [rulesAccordion, rulebookAccordion].forEach((section) => {
+    if (!section) return;
+    section.hidden = !isVisible;
+    section.setAttribute("aria-hidden", String(!isVisible));
+  });
+
+  if (rulebookLink) {
+    rulebookLink.classList.toggle("is-disabled", !isVisible);
+    rulebookLink.setAttribute("aria-disabled", String(!isVisible));
+    rulebookLink.tabIndex = isVisible ? 0 : -1;
+  }
 }
 
 function getStatusClass(status) {
@@ -711,9 +731,11 @@ function setUiControlsState(settings = {}) {
     showLeaderboard: settings?.showLeaderboard !== false,
     registrationOpen: settings?.registrationOpen !== false,
     showInterestButton: settings?.showInterestButton !== false,
+    showRules: settings?.showRules !== false,
     registrationClosedMessage: String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL"),
   };
   registrationPortalController?.applyAvailability?.(liveUiControls);
+  applyRulesVisibility(liveUiControls.showRules);
   renderVotingShell();
   renderLeaderboard();
 }
