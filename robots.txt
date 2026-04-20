@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://beeinfinitygroups.com/sitemap.xml

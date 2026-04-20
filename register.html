@@ -7,9 +7,25 @@
     name="description"
     content="Register for the BOTD first audition round. Submit your dance performance, upload your video and audio track, and take your first step to the stage."
   >
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.cashfree.com https://sandbox.cashfree.com https://*.cashfree.com https://cdn.jsdelivr.net blob:; connect-src 'self' https://sandbox.cashfree.com https://api.cashfree.com https://*.cashfree.com; frame-src https://sandbox.cashfree.com https://*.cashfree.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https:;">
+  <meta name="keywords" content="BOTD registration, dance audition registration, online dance competition registration, Bangalore dance audition">
+  <meta name="author" content="Bee Infinity Groups">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="Register for BOTD | Battle Of The Dance">
+  <meta property="og:description" content="Submit your BOTD audition with performance video, final audio track, consent, and secure payment.">
+  <meta property="og:image" content="https://beeinfinitygroups.com/assets/images/posters/poster6.webp">
+  <meta property="og:url" content="https://beeinfinitygroups.com/register.html">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Register for BOTD | Battle Of The Dance">
+  <meta name="twitter:description" content="Start your BOTD audition submission with a complete registration and payment flow.">
+  <meta name="twitter:image" content="https://beeinfinitygroups.com/assets/images/posters/poster6.webp">
+  <link rel="canonical" href="https://beeinfinitygroups.com/register.html">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.cashfree.com https://sandbox.cashfree.com https://*.cashfree.com https://cdn.jsdelivr.net https://www.gstatic.com https://*.gstatic.com https://code.tidio.co blob:; connect-src 'self' https://botd-backend.onrender.com https://sandbox.cashfree.com https://api.cashfree.com https://*.cashfree.com https://firestore.googleapis.com https://*.googleapis.com https://*.firebaseio.com https://firebasestorage.googleapis.com https://*.firebasestorage.app https://code.tidio.co https://*.tidio.co wss://*.firebaseio.com; frame-src https://sandbox.cashfree.com https://*.cashfree.com https://www.google.com https://www.recaptcha.net https://*.tidio.co; img-src 'self' data: blob: https: https://*.tidio.co; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:;">
   <title>Register Now | Battle Of The Dance</title>
   <link rel="icon" type="image/png" href="assets/images/logo/Final_BOTD_Logo.png">
+  <link rel="apple-touch-icon" href="assets/images/logo/Final_BOTD_Logo.png">
+  <link rel="preconnect" href="https://sdk.cashfree.com">
+  <link rel="preconnect" href="https://firestore.googleapis.com">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/register.css">
 </head>
@@ -67,7 +83,7 @@
               <span class="register-highlight-label">Registration Access</span>
               <strong id="registration-hero-status">AUDITIONS OPEN ON 20th APRIL</strong>
               <p id="registration-hero-copy">Registrations are temporarily disabled on the website until auditions officially open.</p>
-              <p>Registrations will open on 20th April, Entry Fee: ₹99 (Applicable upon registration)</p>
+              <p>Registrations will open on 20th April, Entry Fee: ₹1 (Applicable upon registration)</p>
               <p>This is a skill-based dance competition platform. No gambling or betting involved.</p>
             </div>
           </div>
@@ -277,14 +293,14 @@
                   <h2>Submit your audition</h2>
                 </div>
 
-                <div class="registration-disabled-banner" id="registration-disabled-banner" role="status" aria-live="polite" hidden>
+                <div class="registration-disabled-banner" id="registration-disabled-banner" role="status" aria-live="polite">
                   <p class="eyebrow">Registration Closed</p>
                   <h3 id="registration-disabled-title">Auditions open on 20th April</h3>
                   <p id="registration-disabled-copy">The form is temporarily disabled right now. Once registration opens, media upload and submission will be enabled again from this same page.</p>
                 </div>
 
                 
-                    <form id="registration-form" class="registration-form" data-registration-closed="true" novalidate>  
+                    <form id="registration-form" class="registration-form is-disabled" data-registration-closed="true" aria-hidden="true" hidden novalidate>  
                   <div class="visually-hidden" aria-hidden="true">
                     <label>Leave this empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
                   </div>
@@ -456,30 +472,51 @@
                       <p class="payment-label">Registration Step</p>
                       <strong class="payment-value">Continue to complete</strong>
                     </div>
-                    <button type="button" class="button button-primary payment-button" id="pay-submit">  
-                      <span class="payment-button-text">Register &amp; Continue Payment</span>
+                    <button type="button" class="button button-primary payment-button" id="submitBtn">
+                      <span class="payment-button-text">Pay Now</span>
                     </button>
                   </div>
-                  <div class="interest-panel" id="registration-interest-panel">
-                    <div>
-                      <p class="payment-label">Not ready yet?</p>
-                      <strong class="payment-value">Show your interest in BOTD</strong>
+                  <div class="registration-payment-copy">
+                    <div class="registration-fee-note" aria-label="Registration fee">
+                      <span>Registration Fee</span>
+                      <strong>₹1/-</strong>
                     </div>
-                    <button type="button" class="button button-secondary interest-button" id="registration-interest-button" data-keep-active="true">
-                      I'm Interested
-                    </button>
-                  </div>
-                  <p class="interest-status" id="registration-interest-status" aria-live="polite"></p>
                     <p>Payment is required to complete registration. No hidden charges.</p>
-                  <div class="upload-progress is-hidden" id="upload-progress" aria-hidden="true">
-                    <span class="upload-progress-bar" id="upload-progress-bar"></span>
+                    <div class="upload-progress is-hidden" id="upload-progress" aria-hidden="true">
+                      <span class="upload-progress-bar" id="upload-progress-bar"></span>
+                    </div>
+                    <p class="form-status" id="form-status" aria-live="polite"></p>
                   </div>
-                  <p class="form-status" id="form-status" aria-live="polite"></p>
                   <div class="success-message is-hidden" id="success-message">
                     <h3>Registration received</h3>
                     <p>Your BOTD registration PDF, form details, and uploads have been stored successfully.</p>
+                    <div class="registration-confirmation" id="registration-confirmation" hidden>
+                      <div class="registration-confirmation-copy">
+                        <span>Registration ID</span>
+                        <strong id="registration-id-display">BOTD-S1-0000</strong>
+                        <p>Scan this QR at verification to confirm your BOTD entry.</p>
+                      </div>
+                      <div class="registration-qr-wrap">
+                        <img id="registration-qr-image" src="" alt="BOTD registration verification QR code" loading="lazy" decoding="async">
+                      </div>
+                      <div class="registration-confirmation-actions">
+                        <a class="button button-primary" id="registration-pdf-download" href="#" target="_blank" rel="noopener noreferrer">Download Registration PDF</a>
+                        <a class="button button-secondary" id="registration-verify-link" href="#" target="_blank" rel="noopener noreferrer">Verify Entry</a>
+                      </div>
+                    </div>
                   </div>
                 </form>
+
+                <div class="interest-panel" id="registration-interest-panel">
+                  <div>
+                    <p class="payment-label">Not ready yet?</p>
+                    <strong class="payment-value">Show your interest in BOTD</strong>
+                  </div>
+                  <button type="button" class="button button-secondary interest-button" id="registration-interest-button" data-keep-active="true">
+                    I'm Interested
+                  </button>
+                </div>
+                <p class="interest-status" id="registration-interest-status" aria-live="polite"></p>
               </div>
             </div>
           </div>
@@ -535,7 +572,108 @@
 
   <script src="js/payment-config.js"></script>
   <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      console.log("Script loaded");
+
+      const btn = document.getElementById("submitBtn");
+
+      if (!btn) {
+        console.error("submitBtn not found");
+        return;
+      }
+
+      if (btn.dataset.paymentBound === "true") {
+        return;
+      }
+
+      btn.dataset.paymentBound = "true";
+
+      btn.addEventListener("click", async function (event) {
+        event.preventDefault();
+        console.log("Pay button clicked");
+
+        if (typeof window.startPayment === "function") {
+          try {
+            await window.startPayment();
+          } catch (error) {
+            console.error("[BOTD] startPayment() failed", error);
+          }
+          return;
+        }
+
+        try {
+          console.log("Payment started");
+
+          const apiBase = String(
+            window.BOTD_CASHFREE_API_BASE || "https://botd-backend.onrender.com/api/cashfree"
+          )
+            .trim()
+            .replace(/\/+$/, "");
+
+          const form = document.getElementById("registration-form");
+          const name = form?.querySelector('input[name="fullName"]')?.value?.trim() || "";
+          const email = form?.querySelector('input[name="email"]')?.value?.trim() || "";
+          const phone = form?.querySelector('input[name="phone"]')?.value?.trim() || "";
+          const returnUrl = `${window.location.origin}${window.location.pathname}?cashfree_order_id={order_id}`;
+
+          let mode = "sandbox";
+          try {
+            const configRes = await fetch(`${apiBase}/config`, { headers: { Accept: "application/json" } });
+            const configJson = await configRes.json();
+            mode = configJson?.mode || mode;
+          } catch (error) {
+            console.warn("[BOTD] Payment config fetch failed", error);
+          }
+
+          const createRes = await fetch(`${apiBase}/create-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({
+              orderAmount: 1,
+              currency: "INR",
+              name,
+              email,
+              phone,
+              returnUrl,
+            }),
+          });
+
+          const createJson = await createRes.json();
+          console.log("API response log", createJson);
+
+          if (!createRes.ok || createJson?.success === false) {
+            throw new Error(createJson?.message || "Unable to create payment order.");
+          }
+
+          const paymentSessionId = createJson?.paymentSessionId || createJson?.payment_session_id;
+          if (!paymentSessionId) {
+            throw new Error("Missing payment session id.");
+          }
+
+          if (typeof window.Cashfree !== "function") {
+            throw new Error("Cashfree SDK not available.");
+          }
+
+          const cashfree = window.Cashfree({ mode });
+          await cashfree.checkout({ paymentSessionId, redirectTarget: "_modal" });
+        } catch (error) {
+          console.error("[BOTD] Payment fallback failed", error);
+          const status = document.getElementById("form-status");
+          if (status) {
+            status.textContent = "Payment could not start. Please try again.";
+            status.classList.remove("is-success");
+            status.classList.add("is-error");
+          }
+        }
+      });
+    });
+  </script>
   <script type="module" src="js/script.js"></script>
+  <!-- Tidio chat temporarily disabled. Re-enable by uncommenting this script:
+  <script src="https://code.tidio.co/x08mmg4rc0toiqiav5htq7hp60lisrgh.js" async></script>
+  -->
 
 </body>
 </html>

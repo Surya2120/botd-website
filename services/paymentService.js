@@ -5,14 +5,14 @@ function getPaymentApiBase() {
     return configuredBase;
   }
 
-  return "";
+  return "https://botd-backend.onrender.com/api/cashfree";
 }
 
 const PAYMENT_API_BASE = getPaymentApiBase();
 
 export const CASHFREE_CONFIG = {
   enabled: true,
-  amount: 99,
+  amount: 1,
   currency: "INR",
 };
 
@@ -70,6 +70,20 @@ export async function createCashfreeOrder(registrationPayload = {}) {
   const config = cachedCashfreeConfig || await loadCashfreeConfig();
   const customerName = registrationPayload?.name || registrationPayload?.fullName || "";
   const returnUrl = `${window.location.origin}${window.location.pathname}?cashfree_order_id={order_id}`;
+  const requestedAmount = Number(
+    registrationPayload?.details?.paymentAmount
+    ?? registrationPayload?.paymentAmount
+    ?? NaN
+  );
+  const orderAmount = Number.isFinite(requestedAmount) && requestedAmount > 0
+    ? requestedAmount
+    : (config.amount || CASHFREE_CONFIG.amount);
+
+  console.log("[BOTD] Creating Cashfree order", {
+    apiBase: PAYMENT_API_BASE,
+    orderAmount,
+    currency: config.currency || CASHFREE_CONFIG.currency,
+  });
 
   const response = await fetch(`${PAYMENT_API_BASE}/create-order`, {
     method: "POST",
@@ -78,7 +92,7 @@ export async function createCashfreeOrder(registrationPayload = {}) {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      orderAmount: config.amount || CASHFREE_CONFIG.amount,
+      orderAmount,
       currency: config.currency || CASHFREE_CONFIG.currency,
       name: customerName,
       email: registrationPayload?.email || "",
@@ -89,15 +103,20 @@ export async function createCashfreeOrder(registrationPayload = {}) {
 
   const payload = await parseJsonResponse(response, "Unable to create Cashfree order.");
 
-  if (!payload?.orderId || !payload?.paymentSessionId) {
+  const orderId = payload?.orderId || payload?.order_id || "";
+  const paymentSessionId = payload?.paymentSessionId || payload?.payment_session_id || "";
+
+  console.log("[BOTD] Cashfree create-order response", payload);
+
+  if (!orderId || !paymentSessionId) {
     throw new Error("Cashfree order details were not returned by the payment API.");
   }
 
   return {
-    orderId: payload.orderId,
-    cfOrderId: payload.cfOrderId || "",
-    paymentSessionId: payload.paymentSessionId,
-    amount: Number(payload.amount || config.amount || CASHFREE_CONFIG.amount),
+    orderId,
+    cfOrderId: payload.cfOrderId || payload?.cf_order_id || "",
+    paymentSessionId,
+    amount: Number(payload.amount || orderAmount || config.amount || CASHFREE_CONFIG.amount),
     currency: payload.currency || config.currency || CASHFREE_CONFIG.currency,
     orderStatus: payload.orderStatus || "ACTIVE",
   };

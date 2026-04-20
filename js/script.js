@@ -43,6 +43,8 @@ import {
 } from "../services/settingsService.js";
 import { submitVote, subscribeTeams, subscribeVoteTallies } from "../services/teamService.js";
 
+console.log("[BOTD] Script loaded");
+
 const THEME_KEY = "botd-theme";
 const DEVICE_ID_KEY = "botd-device-id";
 const LOGO_PATH = "assets/images/logo/Final_BOTD_Logo.png";
@@ -92,6 +94,7 @@ const themeLabel = themeToggle?.querySelector(".theme-toggle-label");
 const menuToggle = document.getElementById("menu-toggle");
 const siteNav = document.getElementById("site-nav");
 const topbar = document.querySelector(".topbar");
+let backToTopButton = null;
 const hero = document.querySelector(".hero");
 const cinematicScenes = document.querySelectorAll(".cinematic-scene");
 const parallaxLayers = document.querySelectorAll(".poster-card");
@@ -122,6 +125,7 @@ let liveUiControls = {
   registrationOpen: false,
   showInterestButton: true,
   showRules: true,
+  registrationFeeAmount: 1,
   registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
 };
 let currentVoteConfirmation = null;
@@ -137,6 +141,44 @@ const votingUiState = {
   isConfirmed: false,
 };
 const OTP_LENGTH = 6;
+
+window.openChat = function openChat() {
+  if (window.tidioChatApi && typeof window.tidioChatApi.open === "function") {
+    window.tidioChatApi.open();
+  }
+};
+
+function bindSubmitPaymentButton() {
+  const btn = document.getElementById("submitBtn");
+
+  if (!btn) {
+    console.error("[BOTD] submitBtn not found");
+    return;
+  }
+
+  if (btn.dataset.paymentBound === "true") {
+    return;
+  }
+
+  btn.dataset.paymentBound = "true";
+
+  btn.addEventListener("click", (event) => {
+    event.preventDefault();
+    console.log("[BOTD] Pay button clicked");
+
+    if (typeof window.startPayment === "function") {
+      window.startPayment();
+    } else {
+      console.error("[BOTD] startPayment() is not available");
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bindSubmitPaymentButton);
+} else {
+  bindSubmitPaymentButton();
+}
 
 function setElementText(id, value) {
   const element = document.getElementById(id);
@@ -726,18 +768,51 @@ function applyVotingContent(content) {
 }
 
 function setUiControlsState(settings = {}) {
+  const hasExplicitRegistrationState = Object.prototype.hasOwnProperty.call(settings || {}, "registrationOpen");
+  const feeAmount = Number(settings?.registrationFeeAmount || 0);
+
   liveUiControls = {
     showVotes: Boolean(settings?.showVotes),
     showLeaderboard: settings?.showLeaderboard !== false,
-    registrationOpen: settings?.registrationOpen !== false,
+    registrationOpen: hasExplicitRegistrationState ? parseToggleValue(settings.registrationOpen, false) : false,
     showInterestButton: settings?.showInterestButton !== false,
     showRules: settings?.showRules !== false,
+    registrationFeeAmount: Number.isFinite(feeAmount) && feeAmount > 0 ? feeAmount : 1,
     registrationClosedMessage: String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL"),
   };
+
+  console.info("[BOTD] UI controls synced", {
+    registrationOpen: liveUiControls.registrationOpen,
+    showInterestButton: liveUiControls.showInterestButton,
+    showRules: liveUiControls.showRules,
+  });
+
   registrationPortalController?.applyAvailability?.(liveUiControls);
   applyRulesVisibility(liveUiControls.showRules);
   renderVotingShell();
   renderLeaderboard();
+}
+
+function parseRegistrationOpen(value) {
+  return parseToggleValue(value, false);
+}
+
+function parseToggleValue(value, fallback = false) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "open", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "closed", "off"].includes(normalized)) return false;
+  }
+
+  if (typeof value === "number") {
+    return value === 1;
+  }
+
+  return fallback;
 }
 
 function getVoteCountForTeam(teamId) {
@@ -1586,6 +1661,29 @@ function setupGlobalControls() {
     link.addEventListener("click", closeMenu);
     link.dataset.bound = "true";
   });
+
+  setupBackToTopButton();
+}
+
+function setupBackToTopButton() {
+  if (backToTopButton) {
+    return;
+  }
+
+  backToTopButton = document.createElement("button");
+  backToTopButton.type = "button";
+  backToTopButton.className = "back-to-top";
+  backToTopButton.setAttribute("aria-label", "Move to top");
+  backToTopButton.textContent = "↑";
+  backToTopButton.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  document.body.appendChild(backToTopButton);
+  syncBackToTopButton();
+}
+
+function syncBackToTopButton() {
+  backToTopButton?.classList.toggle("is-visible", window.scrollY > 420);
 }
 
 function setupRevealAnimations() {
@@ -1616,6 +1714,7 @@ function syncHeaderState() {
   if (topbar) {
     topbar.classList.toggle("is-scrolled", window.scrollY > 18);
   }
+  syncBackToTopButton();
 }
 
 function syncScrollEffects() {
@@ -1892,12 +1991,18 @@ function setupRegistrationFormLegacyDisabled() {
   const videoName = registrationForm.querySelector("#video-file-name");
   const audioName = registrationForm.querySelector("#audio-file-name");
   const photoName = registrationForm.querySelector("#photo-file-name");
-  const payButton = registrationForm.querySelector("#pay-submit");
-  const interestPanel = registrationForm.querySelector("#registration-interest-panel");
-  const interestButton = registrationForm.querySelector("#registration-interest-button");
-  const interestStatus = registrationForm.querySelector("#registration-interest-status");
+  const payButtons = registrationForm.querySelectorAll("#pay-submit, #submitBtn");
+  const payButton = payButtons[0] || null;
+  const interestPanel = document.getElementById("registration-interest-panel");
+  const interestButton = document.getElementById("registration-interest-button");
+  const interestStatus = document.getElementById("registration-interest-status");
   const statusMessage = registrationForm.querySelector("#form-status");
   const successMessage = registrationForm.querySelector("#success-message");
+  const registrationConfirmation = registrationForm.querySelector("#registration-confirmation");
+  const registrationIdDisplay = registrationForm.querySelector("#registration-id-display");
+  const registrationQrImage = registrationForm.querySelector("#registration-qr-image");
+  const registrationPdfDownload = registrationForm.querySelector("#registration-pdf-download");
+  const registrationVerifyLink = registrationForm.querySelector("#registration-verify-link");
   const uploadProgress = registrationForm.querySelector("#upload-progress");
   const uploadProgressBar = registrationForm.querySelector("#upload-progress-bar");
   const termsToggle = registrationForm.querySelector("#terms-inline-toggle");
@@ -1915,6 +2020,70 @@ function setupRegistrationFormLegacyDisabled() {
     if (tone) {
       statusMessage.classList.add(tone);
     }
+  }
+
+  function buildVerificationUrl(registrationId) {
+    const basePath = window.location.pathname.includes("/botd/") ? "/botd" : "";
+    return `${window.location.origin}${basePath}/verify.html?id=${encodeURIComponent(registrationId)}`;
+  }
+
+  async function createRegistrationQrSource(verificationUrl) {
+    if (!verificationUrl) {
+      return "";
+    }
+
+    if (window.QRCode && typeof window.QRCode.toDataURL === "function") {
+      try {
+        return await window.QRCode.toDataURL(verificationUrl, {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: 260,
+          color: {
+            dark: "#111111",
+            light: "#ffffff",
+          },
+        });
+      } catch (error) {
+        console.warn("[BOTD] QR library failed, using image fallback", error);
+      }
+    }
+
+    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(verificationUrl)}`;
+  }
+
+  async function renderRegistrationConfirmation(result = {}) {
+    const registrationId = String(result.registrationId || "").trim();
+
+    if (!registrationConfirmation || !registrationId) {
+      return;
+    }
+
+    const verificationUrl = result.verificationUrl || buildVerificationUrl(registrationId);
+
+    if (registrationIdDisplay) {
+      registrationIdDisplay.textContent = registrationId;
+    }
+
+    if (registrationVerifyLink) {
+      registrationVerifyLink.href = verificationUrl;
+    }
+
+    if (registrationPdfDownload) {
+      if (result.pdfAsset?.url) {
+        registrationPdfDownload.href = result.pdfAsset.url;
+        registrationPdfDownload.removeAttribute("aria-disabled");
+      } else {
+        registrationPdfDownload.href = "#";
+        registrationPdfDownload.setAttribute("aria-disabled", "true");
+      }
+    }
+
+    if (registrationQrImage) {
+      registrationQrImage.alt = `BOTD verification QR code for ${registrationId}`;
+      registrationQrImage.src = await createRegistrationQrSource(verificationUrl);
+    }
+
+    registrationConfirmation.hidden = false;
   }
 
   function updateUploadState(input, label) {
@@ -2038,9 +2207,21 @@ function setupRegistrationFormLegacyDisabled() {
   }
 
   function syncSubmitState() {
-    if (payButton && !payButton.classList.contains("is-loading")) {
-      payButton.disabled = !isFormReady();
+    if (!payButtons.length) {
+      return;
     }
+
+    const shouldDisable = !isFormReady();
+    payButtons.forEach((button) => {
+      if (!button || button.classList.contains("is-loading")) {
+        return;
+      }
+
+      // Keep the button clickable so validation messaging can run on click.
+      button.disabled = false;
+      button.setAttribute("aria-disabled", String(shouldDisable));
+      button.classList.remove("is-disabled");
+    });
   }
 
   function collectFormData() {
@@ -2080,7 +2261,7 @@ function setupRegistrationFormLegacyDisabled() {
         digitalSignature: registrationForm.digitalSignature.value.trim(),
         guardianSignature: guardianSignatureInput?.value.trim() || "",
         termsAcceptedText: termsText,
-        paymentAmount: 99,
+        paymentAmount: 1,
         paymentCurrency: "INR",
         paymentReference: "",
         optionalUploads: {
@@ -2249,7 +2430,7 @@ function setupRegistrationFormLegacyDisabled() {
     termsToggle.setAttribute("aria-expanded", String(nextExpanded));
     termsFull?.classList.toggle("is-hidden", !nextExpanded);
   });
-  payButton?.addEventListener("click", startPayment);
+  payButtons.forEach((button) => button.addEventListener("click", startPayment));
 
   if (!PAYMENT_ENABLED) {
     const paymentLabel = payButton?.querySelector(".payment-button-text");
@@ -2294,14 +2475,16 @@ function setupRegistrationForm() {
   const videoName = registrationForm.querySelector("#video-file-name");
   const audioName = registrationForm.querySelector("#audio-file-name");
   const photoName = registrationForm.querySelector("#photo-file-name");
-  const payButton = registrationForm.querySelector("#pay-submit");
-  const interestPanel = registrationForm.querySelector("#registration-interest-panel");
-  const interestButton = registrationForm.querySelector("#registration-interest-button");
-  const interestStatus = registrationForm.querySelector("#registration-interest-status");
+  const payButtons = registrationForm.querySelectorAll("#pay-submit, #submitBtn");
+  const payButton = payButtons[0] || null;
+  const interestPanel = document.getElementById("registration-interest-panel");
+  const interestButton = document.getElementById("registration-interest-button");
+  const interestStatus = document.getElementById("registration-interest-status");
   const statusMessage = registrationForm.querySelector("#form-status");
   const successMessage = registrationForm.querySelector("#success-message");
   const uploadProgress = registrationForm.querySelector("#upload-progress");
   const uploadProgressBar = registrationForm.querySelector("#upload-progress-bar");
+  const feeValue = registrationForm.querySelector(".registration-fee-note strong");
   const honeypotInput = registrationForm.querySelector('input[name="website"]');
   const termsCollapseToggle = registrationForm.querySelector("#terms-collapse-toggle");
   const termsEmbedCopy = registrationForm.querySelector("#terms-embed-copy");
@@ -2310,10 +2493,29 @@ function setupRegistrationForm() {
   const disabledCopy = document.getElementById("registration-disabled-copy");
   const heroStatus = document.getElementById("registration-hero-status");
   const heroCopy = document.getElementById("registration-hero-copy") || document.querySelector(".register-hero-highlight p");
+  const registrationCard = registrationForm.closest(".registration-card");
   const allControls = Array.from(registrationForm.querySelectorAll("input, select, textarea, button"));
   const uploadInputs = [videoInput, audioInput, photoInput].filter(Boolean);
   const uploadLabels = Array.from(registrationForm.querySelectorAll(".upload-field"));
   let registrationOpen = !defaultClosed;
+
+  function getRegistrationFeeAmount() {
+    const feeAmount = Number(liveUiControls?.registrationFeeAmount || 0);
+    if (Number.isFinite(feeAmount) && feeAmount > 0) {
+      return feeAmount;
+    }
+
+    const fallbackAmount = Number(CASHFREE_CONFIG.amount || 0);
+    return Number.isFinite(fallbackAmount) && fallbackAmount > 0 ? fallbackAmount : 1;
+  }
+
+  function syncFeeDisplay() {
+    if (!feeValue) {
+      return;
+    }
+
+    feeValue.textContent = `₹${getRegistrationFeeAmount()}/-`;
+  }
 
   function setInterestStatus(message, tone) {
     if (!interestStatus) {
@@ -2505,17 +2707,36 @@ function setupRegistrationForm() {
   }
 
   function syncSubmitState() {
-    if (payButton && !payButton.classList.contains("is-loading")) {
-      payButton.disabled = !isFormReady();
+    if (!payButtons.length) {
+      return;
     }
+
+    const shouldDisable = !isFormReady();
+    payButtons.forEach((button) => {
+      if (!button || button.classList.contains("is-loading")) {
+        return;
+      }
+
+      // Keep the button clickable so validation messaging can run on click.
+      button.disabled = false;
+      button.setAttribute("aria-disabled", String(shouldDisable));
+      button.classList.remove("is-disabled");
+    });
   }
 
   function applyRegistrationAvailability(settings = {}) {
-    registrationOpen = settings?.registrationOpen !== false;
+    const hasExplicitRegistrationState = Object.prototype.hasOwnProperty.call(settings || {}, "registrationOpen");
+    registrationOpen = hasExplicitRegistrationState ? parseRegistrationOpen(settings.registrationOpen) : false;
     const closedMessage = String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL");
 
+    console.info("[BOTD] Registration portal state applied", { registrationOpen });
+
     registrationForm.classList.toggle("is-disabled", !registrationOpen);
+    registrationCard?.classList.toggle("registration-card-disabled", !registrationOpen);
     registrationForm.dataset.registrationClosed = registrationOpen ? "false" : "true";
+    document.body.dataset.registrationOpen = registrationOpen ? "true" : "false";
+    registrationForm.hidden = !registrationOpen;
+    registrationForm.setAttribute("aria-hidden", String(!registrationOpen));
 
     if (disabledBanner) {
       disabledBanner.hidden = registrationOpen;
@@ -2575,6 +2796,7 @@ function setupRegistrationForm() {
       setStatus("Registration is open. Complete the form to continue.", "");
     }
 
+    syncFeeDisplay();
     syncSubmitState();
   }
 
@@ -2643,6 +2865,7 @@ function setupRegistrationForm() {
   }
 
   function collectFormData() {
+    const paymentAmount = getRegistrationFeeAmount();
     const termsText = termsEmbedCopy
       ? Array.from(termsEmbedCopy.querySelectorAll("p")).map((item) => item.textContent.trim()).join(" ")
       : "";
@@ -2678,7 +2901,7 @@ function setupRegistrationForm() {
         digitalSignature: registrationForm.digitalSignature.value.trim(),
         guardianSignature: guardianSignatureInput?.value.trim() || "",
         termsAcceptedText: termsText,
-        paymentAmount: CASHFREE_CONFIG.amount,
+        paymentAmount,
         paymentCurrency: CASHFREE_CONFIG.currency,
         paymentReference: "",
         paymentStatus: PAYMENT_ENABLED ? "PENDING" : "DISABLED",
@@ -2734,6 +2957,7 @@ function setupRegistrationForm() {
       const result = await submitRegistration(payload);
       console.log("[BOTD] Registration saved to Firestore and Storage", {
         registrationId: result.id,
+        registrationNumber: result.registrationId,
         folderName: result.folderName,
         pdfUrl: result.pdfAsset?.url || "",
         uploadSummary: result.uploadedFiles,
@@ -2741,7 +2965,8 @@ function setupRegistrationForm() {
 
       setUploadProgress(100);
       successMessage?.classList.remove("is-hidden");
-      setStatus("Payment successful. Your consent form and uploads were saved.", "is-success");
+      await renderRegistrationConfirmation(result);
+      setStatus(`Payment successful. Registration ID: ${result.registrationId || result.id}`, "is-success");
       registrationForm.reset();
       registrationForm.querySelectorAll(".field").forEach((field) => field.classList.remove("is-filled", "is-success", "is-error"));
       syncGroupFields();
@@ -2756,7 +2981,9 @@ function setupRegistrationForm() {
 
       const shouldDownloadPdf = await showPopup({
         title: "Registration Successful",
-        text: "All the Best for BOTD!",
+        text: result.registrationId
+          ? `All the Best for BOTD! Your Registration ID is ${result.registrationId}.`
+          : "All the Best for BOTD!",
         primaryText: result.pdfAsset?.url ? "Download PDF" : "Continue",
         secondaryText: result.pdfAsset?.url ? "Close" : "",
       });
@@ -2791,6 +3018,7 @@ function setupRegistrationForm() {
   }
 
   async function startPayment() {
+    console.log("[BOTD] Payment started");
     registrationForm.querySelectorAll(".field").forEach((field) => markFieldValidity(field, true));
     validateRequiredUploads(true);
     syncConsentState();
@@ -2809,6 +3037,9 @@ function setupRegistrationForm() {
     }
 
     successMessage?.classList.add("is-hidden");
+    if (registrationConfirmation) {
+      registrationConfirmation.hidden = true;
+    }
     setStatus(PAYMENT_ENABLED ? "Preparing secure checkout..." : "Submitting your registration...", "");
     setButtonLoading(payButton, true, PAYMENT_ENABLED ? "Processing" : "Submitting");
 
@@ -2823,6 +3054,7 @@ function setupRegistrationForm() {
     try {
       cashfreeConfig = await loadCashfreeConfig();
       orderContext = await createCashfreeOrder(collectFormData());
+      console.log("[BOTD] Payment API response", orderContext);
     } catch (error) {
       console.error("[BOTD] Cashfree bootstrap failed", error);
       const paymentSetupMissing = String(error?.message || "").toLowerCase().includes("backend url");
@@ -2853,6 +3085,7 @@ function setupRegistrationForm() {
         paymentSessionId: orderContext.paymentSessionId,
         redirectTarget: "_modal",
       });
+      console.log("[BOTD] Cashfree checkout result", checkoutResult);
 
       if (checkoutResult?.error) {
         throw new Error("Payment was not completed.");
@@ -2879,15 +3112,43 @@ function setupRegistrationForm() {
     }
   }
 
+  window.startPayment = startPayment;
+  bindSubmitPaymentButton();
+
   registrationPortalController = {
     applyAvailability(settings = {}) {
       applyRegistrationAvailability({
-        registrationOpen: settings?.registrationOpen !== false,
+        registrationOpen: parseRegistrationOpen(settings?.registrationOpen),
         showInterestButton: settings?.showInterestButton !== false,
         registrationClosedMessage: String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL"),
       });
     },
   };
+
+  registerSubscription(
+    subscribeUiControls(
+      (settings) => {
+        console.info("[BOTD] Register page controls synced", {
+          registrationOpen: settings?.registrationOpen,
+          showInterestButton: settings?.showInterestButton,
+        });
+
+        applyRegistrationAvailability({
+          registrationOpen: parseRegistrationOpen(settings?.registrationOpen),
+          showInterestButton: settings?.showInterestButton !== false,
+          registrationClosedMessage: String(settings?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL"),
+        });
+      },
+      (error) => {
+        console.error("[BOTD] Register page controls failed", error);
+        applyRegistrationAvailability({
+          registrationOpen: false,
+          showInterestButton: liveUiControls.showInterestButton !== false,
+          registrationClosedMessage: liveUiControls.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL",
+        });
+      }
+    )
+  );
 
   registrationForm.addEventListener("input", syncSubmitState);
   registrationForm.addEventListener("change", () => {
@@ -2938,21 +3199,22 @@ function setupRegistrationForm() {
   participantConsentInput?.addEventListener("change", syncConsentState);
   guardianConsentInput?.addEventListener("change", syncConsentState);
   termsCollapseToggle?.addEventListener("click", () => syncTermsCollapse());
-  payButton?.addEventListener("click", startPayment);
+  payButtons.forEach((button) => button.addEventListener("click", startPayment));
   interestButton?.addEventListener("click", handleRegistrationInterest);
 
   const paymentLabel = payButton?.querySelector(".payment-button-text");
   if (paymentLabel) {
-    paymentLabel.textContent = "Register & Continue Payment";
+    paymentLabel.textContent = "Pay Now";
   }
 
+  syncFeeDisplay();
   syncGroupFields();
   syncGuardianFields();
   syncTermsCollapse(false);
   validateRequiredUploads();
   syncConsentState();
   applyRegistrationAvailability({
-    registrationOpen: liveUiControls.registrationOpen,
+    registrationOpen: parseRegistrationOpen(liveUiControls.registrationOpen),
     showInterestButton: liveUiControls.showInterestButton !== false,
     registrationClosedMessage: liveUiControls.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL",
   });

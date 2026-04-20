@@ -239,6 +239,7 @@ img,
   min-height: 100dvh;
   overflow-x: clip;
   overflow-y: visible;
+  padding-top: calc(var(--nav-height) + 17px);
 }
 
 .site-shell::before,
@@ -264,9 +265,11 @@ img,
 }
 
 .topbar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 20;
+  left: 0;
+  right: 0;
+  z-index: 100;
   backdrop-filter: blur(18px);
   background: color-mix(in srgb, var(--bg) 74%, transparent);
   border-bottom: 1px solid var(--line);
@@ -281,6 +284,69 @@ img,
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   border-bottom-color: var(--line-strong);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+}
+
+.back-to-top {
+  position: fixed;
+  right: clamp(16px, 3vw, 28px);
+  bottom: clamp(92px, 12vh, 118px);
+  z-index: 95;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 20%, rgba(255, 255, 255, 0.3), transparent 28%),
+    linear-gradient(135deg, var(--gold-soft), var(--gold-strong));
+  color: #100b03;
+  font-size: 1.35rem;
+  font-weight: 900;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.28),
+    0 0 28px rgba(255, 184, 62, 0.2);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(16px) scale(0.92);
+  transition:
+    opacity var(--transition),
+    visibility var(--transition),
+    transform var(--transition),
+    box-shadow var(--transition);
+}
+
+.back-to-top.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.back-to-top:hover,
+.back-to-top:focus-visible {
+  transform: translateY(-4px) scale(1.04);
+  box-shadow:
+    0 22px 52px rgba(0, 0, 0, 0.34),
+    0 0 36px rgba(255, 184, 62, 0.32);
+}
+
+body[data-theme="light"] .back-to-top {
+  color: #251303;
+  box-shadow:
+    0 18px 42px rgba(107, 67, 12, 0.18),
+    0 0 24px rgba(200, 121, 8, 0.18);
+}
+
+@media (max-width: 640px) {
+  .back-to-top {
+    right: 16px;
+    bottom: 96px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
+  }
 }
 
 .nav-wrap {

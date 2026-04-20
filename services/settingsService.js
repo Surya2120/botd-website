@@ -42,9 +42,10 @@ export async function ensureSettingsDocument() {
     {
       showVotes: false,
       showLeaderboard: true,
-      registrationOpen: true,
+      registrationOpen: false,
       showInterestButton: true,
       showRules: true,
+      registrationFeeAmount: 1,
       registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
       updatedAt: serverTimestamp(),
     },
@@ -68,9 +69,10 @@ export function subscribeUiControls(onData, onError) {
       onData(snap.exists() ? snap.data() : {
         showVotes: false,
         showLeaderboard: true,
-        registrationOpen: true,
+        registrationOpen: false,
         showInterestButton: true,
         showRules: true,
+        registrationFeeAmount: 1,
         registrationClosedMessage: "AUDITIONS OPEN ON 20th APRIL",
       });
     },
@@ -89,14 +91,33 @@ export async function updateUiControls(partialControls = {}) {
   );
 }
 
+function parseBooleanControl(value, fallback = false) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "open", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "closed", "off"].includes(normalized)) return false;
+  }
+
+  if (typeof value === "number") {
+    return value === 1;
+  }
+
+  return fallback;
+}
+
 export function subscribeVoteVisibility(onData, onError) {
   return subscribeUiControls(
     (data) => onData({
       showVotes: Boolean(data?.showVotes),
       showLeaderboard: Boolean(data?.showLeaderboard),
-      registrationOpen: data?.registrationOpen !== false,
+      registrationOpen: parseBooleanControl(data?.registrationOpen, false),
       showInterestButton: data?.showInterestButton !== false,
       showRules: data?.showRules !== false,
+      registrationFeeAmount: Number(data?.registrationFeeAmount || 1),
       registrationClosedMessage: data?.registrationClosedMessage || "AUDITIONS OPEN ON 20th APRIL",
     }),
     onError

@@ -2,8 +2,14 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
+  getDocs,
+  limit,
+  query,
+  runTransaction,
   serverTimestamp,
   setDoc,
+  where,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import {
   getDownloadURL,
@@ -21,6 +27,12 @@ const PDF_TITLE = "BOTD Consent & Registration Form";
 const BOTD_LOGO_PATH = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, "/")}assets/images/logo/Final_BOTD_Logo.png`;
 const PRESENTED_BY_LOGO_PATH = `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, "/")}assets/images/logo/studiozlogo.png`;
 const imageDataCache = new Map();
+const REGISTRATION_NUMBER_PREFIX = "BOTD-S1";
+
+function getBotdBaseUrl() {
+  const basePath = window.location.pathname.includes("/botd/") ? "/botd" : "";
+  return `${window.location.origin}${basePath}`;
+}
 
 function pad(value) {
   return String(value).padStart(2, "0");
@@ -152,6 +164,27 @@ async function imageSourceToDataUrl(source) {
   return dataUrl;
 }
 
+async function createQrCodeDataUrl(value = "") {
+  if (!value || !window.QRCode || typeof window.QRCode.toDataURL !== "function") {
+    return "";
+  }
+
+  try {
+    return await window.QRCode.toDataURL(value, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 220,
+      color: {
+        dark: "#111111",
+        light: "#ffffff",
+      },
+    });
+  } catch (error) {
+    console.warn("[BOTD] QR skipped in PDF", error);
+    return "";
+  }
+}
+
 function safeAddImage(doc, imageData, format, x, y, width, height, label) {
   if (!imageData) {
     return false;
@@ -175,6 +208,100 @@ export function formatName(value = "") {
     .replace(/_+/g, "_")
     .replace(/^_+|_+$/g, "")
     || "registration";
+}
+
+function createRegistrationNumberCandidate() {
+  const randomNumber = Math.floor(1000 + Math.random() * 9000);
+  return `${REGISTRATION_NUMBER_PREFIX}-${randomNumber}`;
+}
+
+async function reserveUniqueRegistrationNumber(payload = {}) {
+  if (String(payload.paymentStatus || "").toUpperCase() !== "SUCCESS") {
+    return "";
+  }
+
+  for (let attempt = 0; attempt < 28; attempt += 1) {
+    const registrationNumber = createRegistrationNumberCandidate();
+    const numberRef = doc(db, "registrationNumbers", registrationNumber);
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const existing = await transaction.get(numberRef);
+
+        if (existing.exists()) {
+          throw new Error("REGISTRATION_NUMBER_EXISTS");
+        }
+
+        transaction.set(numberRef, {
+          registrationId: registrationNumber,
+          paymentStatus: "SUCCESS",
+          name: payload.name || "",
+          category: payload.category || "",
+          email: payload.email || "",
+          phone: payload.phone || "",
+          status: "reserved",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      });
+
+      return registrationNumber;
+    } catch (error) {
+      if (String(error?.message || "") === "REGISTRATION_NUMBER_EXISTS") {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error("Unable to generate a unique BOTD registration ID. Please try again.");
+}
+
+export async function fetchRegistrationByNumber(registrationNumber = "") {
+  const normalizedId = String(registrationNumber || "").trim().toUpperCase();
+
+  if (!normalizedId) {
+    return null;
+  }
+
+  const numberSnapshot = await getDoc(doc(db, "registrationNumbers", normalizedId));
+
+  if (numberSnapshot.exists()) {
+    const numberData = numberSnapshot.data();
+
+    if (numberData.registrationDocId) {
+      const registrationSnapshot = await getDoc(doc(db, "registrations", numberData.registrationDocId));
+
+      if (registrationSnapshot.exists()) {
+        return {
+          id: registrationSnapshot.id,
+          ...registrationSnapshot.data(),
+          registrationId: normalizedId,
+        };
+      }
+    }
+  }
+
+  const registrationQuery = query(
+    collection(db, "registrations"),
+    where("registrationId", "==", normalizedId),
+    limit(1)
+  );
+  const registrationSnapshot = await getDocs(registrationQuery);
+
+  if (registrationSnapshot.empty) {
+    return numberSnapshot.exists()
+      ? { registrationId: normalizedId, ...numberSnapshot.data() }
+      : null;
+  }
+
+  const match = registrationSnapshot.docs[0];
+  return {
+    id: match.id,
+    ...match.data(),
+    registrationId: normalizedId,
+  };
 }
 
 export async function generatePDF(payload) {
@@ -206,8 +333,10 @@ export async function generatePDF(payload) {
     presentedLogoPromise,
     displayPhotoPromise,
   ]);
+  const verificationQr = await createQrCodeDataUrl(payload.verificationUrl || "");
 
   const fields = [
+    ["Registration ID", payload.registrationId],
     ["Full Name", payload.name],
     ["Age", payload.age],
     ["Minor Participant", yesNo(payload.isMinor)],
@@ -399,6 +528,8 @@ export async function generatePDF(payload) {
 
   const paymentDetails = payload.paymentDetails || payload.details?.paymentDetails || {};
   const paymentLines = [
+    `Registration ID: ${normalizeValue(payload.registrationId)}`,
+    `Verify URL: ${normalizeValue(payload.verificationUrl)}`,
     `Gateway: ${normalizeValue(paymentDetails.gateway || "cashfree")}`,
     `Status: ${normalizeValue(paymentDetails.status || payload.paymentStatus)}`,
     `Order ID: ${normalizeValue(paymentDetails.orderId || payload.paymentReference)}`,
@@ -424,6 +555,10 @@ export async function generatePDF(payload) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
   doc.text(paymentLines, marginLeft + 16, cursorY + 44);
+
+  if (verificationQr) {
+    safeAddImage(doc, verificationQr, "PNG", pageWidth - marginLeft - 92, cursorY + 24, 72, 72, "Verification QR");
+  }
 
   return doc.output("blob");
 }
@@ -569,10 +704,17 @@ export async function submitRegistration(payload) {
   const audioFile = payload.files?.audio || null;
   const photoFiles = Array.isArray(payload.files?.photos) ? payload.files.photos : [];
   const documentFiles = Array.isArray(payload.files?.documents) ? payload.files.documents : [];
+  const registrationId = payload.registrationId || await reserveUniqueRegistrationNumber(payload);
+  const verificationUrl = registrationId ? `${getBotdBaseUrl()}/verify.html?id=${encodeURIComponent(registrationId)}` : "";
+  const enrichedPayload = {
+    ...payload,
+    registrationId,
+    verificationUrl,
+  };
   let pdfBlob;
 
   try {
-    pdfBlob = await generatePDF(payload);
+    pdfBlob = await generatePDF(enrichedPayload);
   } catch (error) {
     console.error("[BOTD] PDF generation failed", error);
     throw new Error("PDF generation failed before upload.");
@@ -660,6 +802,9 @@ export async function submitRegistration(payload) {
       parentEmail: payload.parentEmail || "",
       relationship: payload.relationship || "",
       guardianSignature: payload.guardianSignature || "",
+      registrationId,
+      registrationNumber: registrationId,
+      verificationUrl,
       paymentStatus: payload.paymentStatus || "disabled",
       paymentReference: payload.paymentReference || "",
       paymentDetails: payload.paymentDetails || payload.details?.paymentDetails || {},
@@ -689,15 +834,41 @@ export async function submitRegistration(payload) {
         uploadedDocuments: documentAssets.length,
         pdfGenerated: true,
       },
-      details: payload.details || {},
+      details: {
+        ...(payload.details || {}),
+        registrationId,
+        verificationUrl,
+      },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
     const registrationRef = await addDoc(collection(db, "registrations"), registrationDoc);
 
+    if (registrationId) {
+      await setDoc(
+        doc(db, "registrationNumbers", registrationId),
+        {
+          registrationDocId: registrationRef.id,
+          registrationId,
+          verificationUrl,
+          paymentStatus: registrationDoc.paymentStatus,
+          status: registrationDoc.status,
+          name: registrationDoc.name,
+          category: registrationDoc.category,
+          email: registrationDoc.email,
+          phone: registrationDoc.phone,
+          pdfUrl: registrationDoc.pdfUrl,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+
     return {
       id: registrationRef.id,
+      registrationId,
+      verificationUrl,
       folderName,
       uploadedFiles: registrationDoc.media,
       pdfAsset,
